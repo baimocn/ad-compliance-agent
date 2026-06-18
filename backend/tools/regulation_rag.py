@@ -1,7 +1,9 @@
 """工具3：法规 RAG 检索 — 三库并行检索，返回法条+案例+替代建议"""
 import sys
-sys.path.insert(0, 'D:/Desktop/黑客松/pipeline')
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
+from pathlib import Path
+_PROJECT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_PROJECT / 'pipeline'))
+sys.path.insert(0, str(_PROJECT / 'backend'))
 from retrieval import ThreeLibRetriever
 from storage import VmemStore
 

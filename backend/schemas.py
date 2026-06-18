@@ -20,6 +20,12 @@ class Industry(str, Enum):
     REAL_ESTATE = "real_estate"
     FINANCE = "finance"
     ECOMMERCE = "ecommerce"
+    MANUFACTURING = "manufacturing"
+    HEALTHCARE = "healthcare"
+    TECHNOLOGY = "technology"
+    FOOD_SERVICE = "food_service"
+    BEAUTY = "beauty"
+    CORPORATE = "corporate"
 
 
 class FeedbackAction(str, Enum):

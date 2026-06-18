@@ -2,9 +2,11 @@
 import sys
 import time
 import hashlib
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
-sys.path.insert(0, 'D:/Desktop/黑客松/pipeline')
-sys.path.insert(0, 'D:/Desktop/黑客松')
+from pathlib import Path
+_PROJECT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_PROJECT / 'pipeline'))
+sys.path.insert(0, str(_PROJECT / 'backend'))
+sys.path.insert(0, str(_PROJECT))
 
 from schemas import (
     ReviewRequest, ReviewResponse, Violation, RiskLevel,

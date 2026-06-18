@@ -4,7 +4,9 @@ VmemStore — vmem MemoryVectorStore 的简化封装
 """
 
 import sys
-sys.path.insert(0, 'D:/Desktop/黑客松')
+from pathlib import Path
+_PROJECT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_PROJECT))
 
 from vmem.store import MemoryVectorStore, EmbeddingEngine
 

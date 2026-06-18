@@ -1,12 +1,15 @@
 """FastAPI 应用 — 广告法合规审查 API"""
 import sys
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
-sys.path.insert(0, 'D:/Desktop/黑客松/pipeline')
+from pathlib import Path
+_PROJECT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_PROJECT / 'pipeline'))
+sys.path.insert(0, str(_PROJECT / 'backend'))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from schemas import ReviewRequest, ReviewResponse, FeedbackRequest, FeedbackResponse, StatsResponse
 from agent import ComplianceAgent
+from store import ReviewStore
 import config
 
 app = FastAPI(title="广告法合规审查 Agent", version="1.0.0")
@@ -22,11 +25,14 @@ app.add_middleware(
 
 # Agent 实例
 agent_instance = None
+review_store = None
 
 @app.on_event("startup")
 async def startup():
     global agent_instance
+    global review_store
     agent_instance = ComplianceAgent(config)
+    review_store = ReviewStore()
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -36,7 +42,15 @@ async def shutdown():
 @app.post("/api/review", response_model=ReviewResponse)
 async def review(request: ReviewRequest):
     try:
-        return await agent_instance.review(request)
+        response = await agent_instance.review(request)
+        review_store.save_review(
+            response.review_id, request.text, response.status,
+            response.overall_risk.value if hasattr(response.overall_risk, 'value') else str(response.overall_risk),
+            len(response.violations),
+            [{"text": v.text, "category": v.category, "severity": v.severity.value if hasattr(v.severity, 'value') else str(v.severity)} for v in response.violations],
+            request.industry.value if hasattr(request.industry, 'value') else str(request.industry)
+        )
+        return response
     except Exception as e:
         error_msg = str(e)
         # 返回一个带错误信息的安全降级响应
@@ -52,12 +66,17 @@ async def review(request: ReviewRequest):
 
 @app.post("/api/feedback", response_model=FeedbackResponse)
 async def feedback(request: FeedbackRequest):
-    # 反馈存储到 vmem（Phase 1 的 feedback.py 会在后续集成）
+    review_store.save_feedback(
+        request.review_id,
+        request.violation_id,
+        request.action.value if hasattr(request.action, 'value') else str(request.action),
+        request.replacement
+    )
     return FeedbackResponse(success=True)
 
 @app.get("/api/stats", response_model=StatsResponse)
 async def stats():
-    return StatsResponse()
+    return review_store.get_stats()
 
 @app.get("/api/health")
 async def health():

@@ -3,11 +3,13 @@ import sys
 import json
 import asyncio
 import time
+from pathlib import Path
 
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
-sys.path.insert(0, 'D:/Desktop/黑客松/pipeline')
+_PROJECT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_PROJECT / 'pipeline'))
+sys.path.insert(0, str(_PROJECT / 'backend'))
 
-EVAL_DIR = 'D:/Desktop/黑客松/evaluation'
+EVAL_DIR = str(_PROJECT / 'evaluation')
 
 
 async def run_agent_eval():
@@ -52,13 +54,14 @@ async def run_agent_eval():
 
 def run_rag_eval():
     """RAG 评测：15 题检索质量"""
+    import config
     from storage import VmemStore
     from retrieval import ThreeLibRetriever
 
     with open(f'{EVAL_DIR}/rag_eval_cases.json', 'r', encoding='utf-8') as f:
         cases = json.load(f)
 
-    store = VmemStore('D:/Desktop/黑客松/pipeline/data/vmem.db')
+    store = VmemStore(str(config.DB_PATH))
     retriever = ThreeLibRetriever(store)
 
     hits = 0

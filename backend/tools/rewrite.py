@@ -1,7 +1,9 @@
 """工具4：替代文案生成 — 基于禁用→替代映射表 + LLM 生成合规文案"""
 import json
 import sys
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
+from pathlib import Path
+_PROJECT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_PROJECT / 'backend'))
 from schemas import Suggestion
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI

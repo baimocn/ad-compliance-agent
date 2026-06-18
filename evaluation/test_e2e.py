@@ -2,10 +2,12 @@
 import sys
 import asyncio
 import time
+from pathlib import Path
 
+_PROJECT = Path(__file__).resolve().parent.parent
 sys.stdout.reconfigure(encoding='utf-8')
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
-sys.path.insert(0, 'D:/Desktop/黑客松/pipeline')
+sys.path.insert(0, str(_PROJECT / 'pipeline'))
+sys.path.insert(0, str(_PROJECT / 'backend'))
 
 async def test_banned_word_matcher():
     """测试1：禁用词匹配"""
@@ -91,7 +93,8 @@ async def test_rag_retrieval():
     from storage import VmemStore
     from retrieval import ThreeLibRetriever
 
-    store = VmemStore('D:/Desktop/黑客松/pipeline/data/vmem.db')
+    import config
+    store = VmemStore(str(config.DB_PATH))
     retriever = ThreeLibRetriever(store)
 
     cases = [

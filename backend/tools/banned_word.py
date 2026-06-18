@@ -2,7 +2,9 @@
 import re
 import json
 import sys
-sys.path.insert(0, 'D:/Desktop/黑客松/backend')
+from pathlib import Path
+_PROJECT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(_PROJECT / 'backend'))
 from schemas import BannedWordHit
 
 
