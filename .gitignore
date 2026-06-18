@@ -1,0 +1,17 @@
+.env
+node_modules/
+__pycache__/
+*.pyc
+*.pyo
+pipeline/data/vmem.db
+pipeline/data/vmem.db.bak
+pipeline/data/parsed/
+frontend/.next/
+frontend/node_modules/
+frontend/.turbo/
+*.log
+.DS_Store
+Thumbs.db
+evaluation/eval_report.json
+*.db-shm
+*.db-wal

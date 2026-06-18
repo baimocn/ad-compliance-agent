@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "query": "全网最低价算不算违规",
+    "expected_source": "ad_law",
+    "expected_keywords": ["最高级", "最佳", "第九条", "绝对化用语"],
+    "category": "极限用语"
+  },
+  {
+    "id": 2,
+    "query": "广告中使用国家级最好第一等词汇有什么法律后果",
+    "expected_source": "ad_law",
+    "expected_keywords": ["绝对化用语", "罚款", "广告费用", "三倍以上五倍以下"],
+    "category": "极限用语"
+  },
+  {
+    "id": 3,
+    "query": "食品广告能不能宣传治疗功效",
+    "expected_source": "ad_law",
+    "expected_keywords": ["食品广告", "治疗", "疾病预防", "第十七条"],
+    "category": "特殊商品广告"
+  },
+  {
+    "id": 4,
+    "query": "未满十周岁的未成年人能不能做广告代言",
+    "expected_source": "ad_law",
+    "expected_keywords": ["未成年人", "广告代言人", "十周岁", "第三十八条"],
+    "category": "代言规则"
+  },
+  {
+    "id": 5,
+    "query": "虚假广告的认定标准是什么",
+    "expected_source": "ad_law",
+    "expected_keywords": ["虚假", "第二十八条", "欺骗", "误导消费者"],
+    "category": "虚假宣传"
+  },
+  {
+    "id": 6,
+    "query": "某化妆品公司因虚假宣传被罚了多少",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["化妆品", "罚款", "行政处罚", "虚假宣传"],
+    "category": "虚假宣传案例"
+  },
+  {
+    "id": 7,
+    "query": "电商平台使用极限用语被处罚的案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["极限用语", "电商平台", "处罚", "罚款"],
+    "category": "极限用语案例"
+  },
+  {
+    "id": 8,
+    "query": "保健食品广告违规处罚案例有哪些",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["保健食品", "处罚", "违法广告", "功效宣传"],
+    "category": "保健食品案例"
+  },
+  {
+    "id": 9,
+    "query": "直播间虚假宣传被罚款的典型案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["直播", "虚假宣传", "罚款", "处罚决定"],
+    "category": "直播违规案例"
+  },
+  {
+    "id": 10,
+    "query": "教育培训广告承诺包过包就业被处罚的案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["教育培训", "包过", "承诺", "处罚"],
+    "category": "教育培训案例"
+  },
+  {
+    "id": 11,
+    "query": "抖音平台对广告内容有哪些审核规则",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["抖音", "审核", "广告内容", "平台规则"],
+    "category": "平台广告规则"
+  },
+  {
+    "id": 12,
+    "query": "小红书上的种草笔记算不算广告需要标注吗",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["小红书", "种草", "广告标注", "商业推广"],
+    "category": "种草营销规则"
+  },
+  {
+    "id": 13,
+    "query": "化妆品广告中可以使用前后对比效果图吗",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["化妆品", "对比图", "使用前后", "效果展示"],
+    "category": "化妆品广告规则"
+  },
+  {
+    "id": 14,
+    "query": "金融理财产品广告有哪些合规要求",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["金融理财", "合规", "风险提示", "收益率"],
+    "category": "金融广告规则"
+  },
+  {
+    "id": 15,
+    "query": "房地产广告中关于面积和距离的表述规范是什么",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["房地产", "建筑面积", "距离", "表述规范"],
+    "category": "房地产广告规则"
+  }
+]

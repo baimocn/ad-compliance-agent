@@ -1,0 +1,4 @@
+sentence-transformers>=2.2.0
+jieba>=0.42.1
+numpy>=1.24.0
+pydantic>=2.0

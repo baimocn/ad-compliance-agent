@@ -1,0 +1,377 @@
+{
+  "eval_type": "agent",
+  "timestamp": "2026-06-18 22:13:40",
+  "total_cases": 30,
+  "passed": 2,
+  "failed": 28,
+  "avg_score": 0.301,
+  "category_scores": {
+    "极限用语": 0.252,
+    "虚假宣传": 0.237,
+    "行业特殊规则": 0.235,
+    "新业态违规": 0.318,
+    "合规文案": 1.0
+  },
+  "scores": [
+    {
+      "id": "agent_01",
+      "category": "极限用语",
+      "score": 0.167,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_02",
+      "category": "极限用语",
+      "score": 0.25,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 1.0,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_03",
+      "category": "极限用语",
+      "score": 0.167,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_04",
+      "category": "极限用语",
+      "score": 0.167,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_05",
+      "category": "极限用语",
+      "score": 0.167,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_06",
+      "category": "极限用语",
+      "score": 0.25,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 1.0,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_07",
+      "category": "极限用语",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_08",
+      "category": "极限用语",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_09",
+      "category": "极限用语",
+      "score": 0.4,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 1.0,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_10",
+      "category": "极限用语",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_11",
+      "category": "虚假宣传",
+      "score": 0.085,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 0.0
+      }
+    },
+    {
+      "id": "agent_12",
+      "category": "虚假宣传",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_13",
+      "category": "虚假宣传",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_14",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_15",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_16",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_17",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_18",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_19",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_20",
+      "category": "虚假宣传",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_21",
+      "category": "行业特殊规则",
+      "score": 0.235,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.33999999999999997,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_22",
+      "category": "行业特殊规则",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_23",
+      "category": "行业特殊规则",
+      "score": 0.152,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.010000000000000009,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_24",
+      "category": "行业特殊规则",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_25",
+      "category": "行业特殊规则",
+      "score": 0.152,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.010000000000000009,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_26",
+      "category": "新业态违规",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_27",
+      "category": "新业态违规",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_28",
+      "category": "新业态违规",
+      "score": 0.318,
+      "passed": false,
+      "details": {
+        "issue_recall": 0.0,
+        "risk_accuracy": 0.6699999999999999,
+        "law_citation": 0.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_29",
+      "category": "合规文案",
+      "score": 1.0,
+      "passed": true,
+      "details": {
+        "issue_recall": 1.0,
+        "risk_accuracy": 1.0,
+        "law_citation": 1.0,
+        "suggestion_quality": 1.0
+      }
+    },
+    {
+      "id": "agent_30",
+      "category": "合规文案",
+      "score": 1.0,
+      "passed": true,
+      "details": {
+        "issue_recall": 1.0,
+        "risk_accuracy": 1.0,
+        "law_citation": 1.0,
+        "suggestion_quality": 1.0
+      }
+    }
+  ]
+}
