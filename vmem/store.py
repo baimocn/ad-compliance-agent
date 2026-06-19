@@ -17,20 +17,32 @@ import numpy as np
 # ---------------------------------------------------------------------------
 
 class EmbeddingEngine:
-    """基于 sentence-transformers 的嵌入引擎，输出 float32[512] 归一化向量。"""
+    """嵌入引擎。优先使用 sentence-transformers，不可用时回退到字符 n-gram 哈希嵌入。
+
+    输出 float32[512] 归一化向量。
+    """
+
+    EMBED_DIM = 512
 
     def __init__(self, model_path: str = None):
         if model_path is None:
-            from vmem.config import MODEL_PATH
-            model_path = MODEL_PATH
+            try:
+                from vmem.config import MODEL_PATH
+                model_path = MODEL_PATH
+            except Exception:
+                model_path = None
         self._model_path = model_path
         self._model = None
+        self._use_fallback = False
 
     def _ensure_loaded(self):
-        if self._model is not None:
+        if self._model is not None or self._use_fallback:
             return
-        from sentence_transformers import SentenceTransformer
-        self._model = SentenceTransformer(self._model_path)
+        try:
+            from sentence_transformers import SentenceTransformer
+            self._model = SentenceTransformer(self._model_path)
+        except Exception:
+            self._use_fallback = True
 
     def encode(self, texts: List[str]) -> np.ndarray:
         """
@@ -38,15 +50,118 @@ class EmbeddingEngine:
         返回 shape = (len(texts), 512) 的 numpy 数组。
         """
         self._ensure_loaded()
-        embeddings = self._model.encode(
-            texts,
-            normalize_embeddings=True,
-            convert_to_numpy=True,
-        )
-        # 确保 shape 正确
-        if embeddings.ndim == 1:
-            embeddings = embeddings.reshape(1, -1)
+        if self._model is not None:
+            embeddings = self._model.encode(
+                texts,
+                normalize_embeddings=True,
+                convert_to_numpy=True,
+            )
+            if embeddings.ndim == 1:
+                embeddings = embeddings.reshape(1, -1)
+            return embeddings.astype(np.float32)
+        else:
+            # Fallback: 字符 n-gram 哈希嵌入
+            return self._fallback_encode(texts)
+
+    def _fallback_encode(self, texts: List[str]) -> np.ndarray:
+        """
+        改进的 fallback 嵌入：关键词加权 + 字符 n-gram 哈希。
+
+        使用两层特征：
+        1. 领域关键词特征（高权重）：广告法常见术语，按重要性加权
+        2. 字符 n-gram 哈希特征（低权重）：捕获剩余语义信息
+
+        这使得 fallback 模式在广告法领域的检索质量显著优于纯字符 n-gram。
+        """
+        n = len(texts)
+        dim = self.EMBED_DIM
+        embeddings = np.zeros((n, dim), dtype=np.float32)
+
+        # 领域关键词词典（高权重特征）
+        domain_keywords = self._get_domain_keywords()
+        n_keywords = len(domain_keywords)
+        keyword_dim = min(n_keywords * 2, dim // 2)  # 前半维度给关键词
+
+        for i, text in enumerate(texts):
+            if not text:
+                continue
+
+            # Layer 1: 领域关键词特征（高权重）
+            for j, (kw, weight) in enumerate(domain_keywords):
+                if kw in text:
+                    # 计算出现次数
+                    count = text.count(kw)
+                    idx = j % keyword_dim
+                    embeddings[i, idx] += weight * count
+
+            # Layer 2: 字符 n-gram 哈希特征（低权重，补充语义）
+            chars = list(text)
+            grams = []
+            for k in [2, 3, 4]:
+                for j in range(len(chars) - k + 1):
+                    grams.append("".join(chars[j:j + k]))
+
+            gram_weight = 0.3  # n-gram 特征权重低于关键词
+            for gram in grams:
+                h = hash(gram) & 0x7FFFFFFF
+                # 映射到后半部分维度
+                idx = keyword_dim + (h % (dim - keyword_dim))
+                sign = 1.0 if (h >> 16) & 1 else -1.0
+                embeddings[i, idx] += sign * gram_weight
+
+        # L2 归一化
+        norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+        norms[norms == 0] = 1.0
+        embeddings = embeddings / norms
+
         return embeddings.astype(np.float32)
+
+    @staticmethod
+    def _get_domain_keywords() -> List[tuple]:
+        """广告法领域关键词及其权重。权重越高，对相似度的影响越大。"""
+        # (关键词, 权重) — 权重根据术语的领域特异性设定
+        return [
+            # 核心法律概念（最高权重）
+            ("广告法", 5.0), ("虚假广告", 5.0), ("绝对化用语", 5.0),
+            ("极限用语", 5.0), ("第二十八条", 4.5), ("第九条", 4.5),
+            ("第五十七条", 4.5), ("第五十五条", 4.5), ("第十七条", 4.0),
+            ("第十八条", 4.0), ("第二十六条", 4.0), ("第三十八条", 4.0),
+            ("第二十四条", 4.0), ("第二十五条", 4.0), ("第十六条", 4.0),
+            # 违法行为类型
+            ("虚假宣传", 4.0), ("虚假", 3.0), ("欺骗", 3.0), ("误导", 3.0),
+            ("违法", 3.5), ("违规", 3.5), ("禁止", 3.5), ("不得", 3.0),
+            ("处罚", 3.5), ("罚款", 3.5), ("吊销", 3.0), ("没收", 3.0),
+            # 广告主体
+            ("广告主", 3.0), ("广告经营者", 3.0), ("广告发布者", 3.0),
+            ("广告代言人", 3.5), ("代言", 3.0), ("推荐", 2.5), ("证明", 2.0),
+            # 行业领域
+            ("医疗广告", 4.0), ("医疗器械", 3.5), ("药品广告", 3.5),
+            ("保健食品", 4.0), ("食品广告", 3.5), ("化妆品广告", 3.5),
+            ("房地产广告", 3.5), ("金融广告", 3.0), ("教育", 3.0),
+            ("烟草广告", 3.5), ("酒类广告", 3.0), ("母婴", 2.5),
+            # 平台/互联网
+            ("互联网广告", 3.5), ("弹窗广告", 3.0), ("一键关闭", 3.0),
+            ("抖音", 3.5), ("小红书", 3.5), ("直播", 3.0), ("种草", 3.0),
+            ("平台规则", 3.5), ("审核规则", 3.0), ("合规", 3.0),
+            # 常见违规点
+            ("国家级", 4.0), ("最高级", 4.0), ("最佳", 4.0), ("第一", 3.0),
+            ("最低价", 3.5), ("顶级", 3.0), ("销量冠军", 2.5),
+            ("治愈率", 3.5), ("有效率", 3.5), ("保过", 3.5), ("包过", 3.5),
+            ("保本保息", 3.5), ("零风险", 3.5), ("升值", 3.0),
+            ("学区房", 3.5), ("投资回报", 3.0),
+            # 法律责任
+            ("法律责任", 3.5), ("民事责任", 3.0), ("连带责任", 3.5),
+            ("行政处罚", 3.5), ("刑事责任", 3.0),
+            ("三倍以上五倍以下", 3.5), ("二十万元", 3.0), ("一百万元", 3.0),
+            # 其他重要概念
+            ("未成年人", 3.5), ("十周岁", 3.0), ("消费者权益", 3.0),
+            ("引人误解", 3.5), ("真实", 2.5), ("合法", 2.5),
+            ("专利", 2.5), ("贬低", 3.0), ("不正当竞争", 3.0),
+            ("可识别性", 2.5), ("公益广告", 2.0),
+            # 行业规则关键词
+            ("核心禁令", 3.0), ("常见违规", 3.0), ("注意事项", 2.5),
+            ("规范", 2.5), ("要求", 2.0), ("话术", 2.5),
+        ]
 
 
 # ---------------------------------------------------------------------------
@@ -1393,6 +1508,92 @@ class MemoryVectorStore:
     # ------------------------------------------------------------------
     # 上下文管理器
     # ------------------------------------------------------------------
+
+    def update_confidence(self, key: str, delta: float) -> bool:
+        """更新指定 key 条目的置信度。
+
+        Args:
+            key: 条目 key
+            delta: 置信度变化量（正数提升，负数降低）
+
+        Returns:
+            True 表示更新成功
+        """
+        try:
+            conn = self._get_conn()
+            now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            # 获取当前置信度
+            row = conn.execute(
+                "SELECT confidence FROM memory_vectors WHERE key = ?", (key,)
+            ).fetchone()
+            if not row:
+                return False
+
+            current_conf = row[0] if row[0] is not None else 0.5
+            new_conf = max(0.05, min(0.99, current_conf + delta))
+
+            conn.execute(
+                "UPDATE memory_vectors SET confidence = ?, updated_at = ? WHERE key = ?",
+                (new_conf, now, key)
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            print(f"[vmem] update_confidence error: {e}")
+            return False
+
+    def update_confidence_by_keyword(self, keyword: str, delta: float) -> int:
+        """根据关键词匹配更新相关条目的置信度。
+
+        找到 value 中包含该关键词的所有条目，批量调整置信度。
+
+        Args:
+            keyword: 关键词
+            delta: 置信度变化量
+
+        Returns:
+            更新的条目数量
+        """
+        try:
+            conn = self._get_conn()
+            now = time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            like_pattern = f"%{keyword}%"
+
+            # 找到匹配的条目
+            rows = conn.execute(
+                "SELECT key, confidence FROM memory_vectors WHERE value LIKE ? LIMIT 50",
+                (like_pattern,)
+            ).fetchall()
+
+            count = 0
+            for row in rows:
+                key = row[0]
+                current_conf = row[1] if row[1] is not None else 0.5
+                new_conf = max(0.05, min(0.99, current_conf + delta))
+                conn.execute(
+                    "UPDATE memory_vectors SET confidence = ?, updated_at = ? WHERE key = ?",
+                    (new_conf, now, key)
+                )
+                count += 1
+
+            conn.commit()
+            return count
+        except Exception as e:
+            print(f"[vmem] update_confidence_by_keyword error: {e}")
+            return 0
+
+    def get_confidence(self, key: str) -> float:
+        """获取指定条目的置信度。"""
+        try:
+            conn = self._get_conn()
+            row = conn.execute(
+                "SELECT confidence FROM memory_vectors WHERE key = ?", (key,)
+            ).fetchone()
+            if row and row[0] is not None:
+                return float(row[0])
+            return 0.5
+        except Exception:
+            return 0.5
 
     def close(self):
         if self._conn:

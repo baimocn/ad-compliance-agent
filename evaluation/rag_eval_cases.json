@@ -4,104 +4,251 @@
     "query": "全网最低价算不算违规",
     "expected_source": "ad_law",
     "expected_keywords": ["最高级", "最佳", "第九条", "绝对化用语"],
-    "category": "极限用语"
+    "category": "极限用语",
+    "query_type": "law"
   },
   {
     "id": 2,
     "query": "广告中使用国家级最好第一等词汇有什么法律后果",
     "expected_source": "ad_law",
     "expected_keywords": ["绝对化用语", "罚款", "广告费用", "三倍以上五倍以下"],
-    "category": "极限用语"
+    "category": "极限用语",
+    "query_type": "law"
   },
   {
     "id": 3,
     "query": "食品广告能不能宣传治疗功效",
     "expected_source": "ad_law",
     "expected_keywords": ["食品广告", "治疗", "疾病预防", "第十七条"],
-    "category": "特殊商品广告"
+    "category": "特殊商品广告",
+    "query_type": "law"
   },
   {
     "id": 4,
     "query": "未满十周岁的未成年人能不能做广告代言",
     "expected_source": "ad_law",
     "expected_keywords": ["未成年人", "广告代言人", "十周岁", "第三十八条"],
-    "category": "代言规则"
+    "category": "代言规则",
+    "query_type": "law"
   },
   {
     "id": 5,
     "query": "虚假广告的认定标准是什么",
     "expected_source": "ad_law",
     "expected_keywords": ["虚假", "第二十八条", "欺骗", "误导消费者"],
-    "category": "虚假宣传"
+    "category": "虚假宣传",
+    "query_type": "law"
   },
   {
     "id": 6,
-    "query": "某化妆品公司因虚假宣传被罚了多少",
-    "expected_source": "penalty_case",
-    "expected_keywords": ["化妆品", "罚款", "行政处罚", "虚假宣传"],
-    "category": "虚假宣传案例"
+    "query": "广告法第九条规定了哪些禁止情形",
+    "expected_source": "ad_law",
+    "expected_keywords": ["第九条", "禁止", "国家级", "最高级"],
+    "category": "法律条文",
+    "query_type": "law"
   },
   {
     "id": 7,
-    "query": "电商平台使用极限用语被处罚的案例",
-    "expected_source": "penalty_case",
-    "expected_keywords": ["极限用语", "电商平台", "处罚", "罚款"],
-    "category": "极限用语案例"
+    "query": "绝对化用语的罚款标准是多少",
+    "expected_source": "ad_law",
+    "expected_keywords": ["第五十七条", "罚款", "二十万元", "一百万元"],
+    "category": "罚款标准",
+    "query_type": "law"
   },
   {
     "id": 8,
-    "query": "保健食品广告违规处罚案例有哪些",
-    "expected_source": "penalty_case",
-    "expected_keywords": ["保健食品", "处罚", "违法广告", "功效宣传"],
-    "category": "保健食品案例"
+    "query": "什么是虚假广告，如何认定",
+    "expected_source": "ad_law",
+    "expected_keywords": ["第二十八条", "虚假", "引人误解", "欺骗"],
+    "category": "虚假宣传",
+    "query_type": "law"
   },
   {
     "id": 9,
-    "query": "直播间虚假宣传被罚款的典型案例",
+    "query": "某化妆品公司因虚假宣传被罚了多少",
     "expected_source": "penalty_case",
-    "expected_keywords": ["直播", "虚假宣传", "罚款", "处罚决定"],
-    "category": "直播违规案例"
+    "expected_keywords": ["化妆品", "罚款", "行政处罚", "虚假宣传"],
+    "category": "虚假宣传案例",
+    "query_type": "case"
   },
   {
     "id": 10,
-    "query": "教育培训广告承诺包过包就业被处罚的案例",
+    "query": "电商平台使用极限用语被处罚的案例",
     "expected_source": "penalty_case",
-    "expected_keywords": ["教育培训", "包过", "承诺", "处罚"],
-    "category": "教育培训案例"
+    "expected_keywords": ["极限用语", "电商平台", "处罚", "罚款"],
+    "category": "极限用语案例",
+    "query_type": "case"
   },
   {
     "id": 11,
-    "query": "抖音平台对广告内容有哪些审核规则",
-    "expected_source": "industry_rule",
-    "expected_keywords": ["抖音", "审核", "广告内容", "平台规则"],
-    "category": "平台广告规则"
+    "query": "保健食品广告违规处罚案例有哪些",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["保健食品", "处罚", "违法广告", "功效宣传"],
+    "category": "保健食品案例",
+    "query_type": "case"
   },
   {
     "id": 12,
-    "query": "小红书上的种草笔记算不算广告需要标注吗",
-    "expected_source": "industry_rule",
-    "expected_keywords": ["小红书", "种草", "广告标注", "商业推广"],
-    "category": "种草营销规则"
+    "query": "直播间虚假宣传被罚款的典型案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["直播", "虚假宣传", "罚款", "处罚决定"],
+    "category": "直播违规案例",
+    "query_type": "case"
   },
   {
     "id": 13,
-    "query": "化妆品广告中可以使用前后对比效果图吗",
-    "expected_source": "industry_rule",
-    "expected_keywords": ["化妆品", "对比图", "使用前后", "效果展示"],
-    "category": "化妆品广告规则"
+    "query": "教育培训广告承诺包过包就业被处罚的案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["教育培训", "包过", "承诺", "处罚"],
+    "category": "教育培训案例",
+    "query_type": "case"
   },
   {
     "id": 14,
-    "query": "金融理财产品广告有哪些合规要求",
-    "expected_source": "industry_rule",
-    "expected_keywords": ["金融理财", "合规", "风险提示", "收益率"],
-    "category": "金融广告规则"
+    "query": "房地产虚假宣传被罚案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["房地产", "虚假宣传", "罚款", "处罚"],
+    "category": "房地产案例",
+    "query_type": "case"
   },
   {
     "id": 15,
+    "query": "名人代言虚假广告会怎么处罚",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["代言", "虚假广告", "罚款", "连带责任"],
+    "category": "代言案例",
+    "query_type": "case"
+  },
+  {
+    "id": 16,
+    "query": "金融理财虚假宣传被处罚的案例",
+    "expected_source": "penalty_case",
+    "expected_keywords": ["金融理财", "虚假宣传", "罚款", "保本保息"],
+    "category": "金融案例",
+    "query_type": "case"
+  },
+  {
+    "id": 17,
+    "query": "抖音平台对广告内容有哪些审核规则",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["抖音", "审核", "广告内容", "平台规则"],
+    "category": "平台广告规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 18,
+    "query": "小红书上的种草笔记算不算广告需要标注吗",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["小红书", "种草", "广告标注", "商业推广"],
+    "category": "种草营销规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 19,
+    "query": "化妆品广告中可以使用前后对比效果图吗",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["化妆品", "对比图", "使用前后", "效果展示"],
+    "category": "化妆品广告规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 20,
+    "query": "金融理财产品广告有哪些合规要求",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["金融理财", "合规", "风险提示", "收益率"],
+    "category": "金融广告规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 21,
     "query": "房地产广告中关于面积和距离的表述规范是什么",
     "expected_source": "industry_rule",
     "expected_keywords": ["房地产", "建筑面积", "距离", "表述规范"],
-    "category": "房地产广告规则"
+    "category": "房地产广告规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 22,
+    "query": "直播带货保健食品需要注意什么",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["直播", "保健食品", "合规", "不能代替药物"],
+    "category": "直播合规规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 23,
+    "query": "医疗美容广告有哪些禁止内容",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["医疗美容", "禁止", "治愈率", "代言"],
+    "category": "医美广告规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 24,
+    "query": "教育培训广告不能用什么话术",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["教育", "保过", "承诺", "升学率"],
+    "category": "教育广告规则",
+    "query_type": "rule"
+  },
+  {
+    "id": 25,
+    "query": "广告违规处罚有哪些类型",
+    "expected_source": "ad_law",
+    "expected_keywords": ["罚款", "法律责任", "处罚", "吊销"],
+    "category": "法律责任",
+    "query_type": "general",
+    "boundary_case": true,
+    "boundary_note": "同时涉及法规和案例，属于边界查询"
+  },
+  {
+    "id": 26,
+    "query": "化妆品广告合规审查要点",
+    "expected_source": "industry_rule",
+    "expected_keywords": ["化妆品", "合规", "医疗用语", "绝对化用语"],
+    "category": "化妆品合规",
+    "query_type": "general",
+    "boundary_case": true,
+    "boundary_note": "涉及行业规则和法律条文，偏行业规则"
+  },
+  {
+    "id": 27,
+    "query": "虚假宣传怎么举报，会受到什么处罚",
+    "expected_source": "ad_law",
+    "expected_keywords": ["虚假宣传", "举报", "罚款", "处罚"],
+    "category": "维权投诉",
+    "query_type": "general",
+    "boundary_case": true,
+    "boundary_note": "同时涉及法律规定和处罚案例"
+  },
+  {
+    "id": 28,
+    "query": "互联网广告有什么特别规定",
+    "expected_source": "ad_law",
+    "expected_keywords": ["互联网", "弹窗广告", "一键关闭", "第四十四条"],
+    "category": "互联网广告",
+    "query_type": "general",
+    "boundary_case": true,
+    "boundary_note": "涉及平台规则和法律条文"
+  },
+  {
+    "id": 29,
+    "query": "广告代言需要注意哪些法律问题",
+    "expected_source": "ad_law",
+    "expected_keywords": ["代言", "连带责任", "未成年人", "第三十八条"],
+    "category": "代言合规",
+    "query_type": "general",
+    "boundary_case": true,
+    "boundary_note": "涉及法律条文和行业惯例"
+  },
+  {
+    "id": 30,
+    "query": "常见的广告违法情形有哪些",
+    "expected_source": "ad_law",
+    "expected_keywords": ["违法", "第九条", "虚假广告", "极限用语"],
+    "category": "综合知识",
+    "query_type": "general",
+    "boundary_case": true,
+    "boundary_note": "综合性查询，需要检索多库"
   }
 ]

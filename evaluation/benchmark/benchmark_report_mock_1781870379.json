@@ -1,0 +1,69 @@
+{
+  "mode": "mock",
+  "timestamp": "2026-06-19 19:59:39",
+  "test_texts_count": 10,
+  "results": [
+    {
+      "concurrency": 5,
+      "duration_s": 5.24,
+      "total_requests": 100,
+      "errors": 0,
+      "error_rate": 0.0,
+      "req_per_second": 19.08,
+      "avg_latency_ms": 261.99,
+      "p50_latency_ms": 262.02,
+      "p95_latency_ms": 262.12,
+      "p99_latency_ms": 262.12,
+      "min_latency_ms": 261.73,
+      "max_latency_ms": 262.12
+    },
+    {
+      "concurrency": 10,
+      "duration_s": 5.25,
+      "total_requests": 198,
+      "errors": 0,
+      "error_rate": 0.0,
+      "req_per_second": 37.73,
+      "avg_latency_ms": 263.46,
+      "p50_latency_ms": 262.45,
+      "p95_latency_ms": 262.64,
+      "p99_latency_ms": 363.24,
+      "min_latency_ms": 261.9,
+      "max_latency_ms": 363.26
+    },
+    {
+      "concurrency": 20,
+      "duration_s": 5.51,
+      "total_requests": 208,
+      "errors": 0,
+      "error_rate": 0.0,
+      "req_per_second": 37.76,
+      "avg_latency_ms": 513.95,
+      "p50_latency_ms": 524.31,
+      "p95_latency_ms": 526.86,
+      "p99_latency_ms": 527.11,
+      "min_latency_ms": 262.11,
+      "max_latency_ms": 624.96
+    },
+    {
+      "concurrency": 50,
+      "duration_s": 6.3,
+      "total_requests": 238,
+      "errors": 0,
+      "error_rate": 0.0,
+      "req_per_second": 37.78,
+      "avg_latency_ms": 1205.77,
+      "p50_latency_ms": 1311.49,
+      "p95_latency_ms": 1317.14,
+      "p99_latency_ms": 1317.17,
+      "min_latency_ms": 262.12,
+      "max_latency_ms": 1411.06
+    }
+  ],
+  "summary": {
+    "best_rps": 37.78,
+    "max_p99": 1317.17,
+    "target_rps_5": true,
+    "target_p99_2s": true
+  }
+}

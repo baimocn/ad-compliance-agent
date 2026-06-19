@@ -1,0 +1,610 @@
+{
+  "time": "2026-06-19 19:45:34",
+  "version": "v2",
+  "mode": "mock",
+  "ab_test": {
+    "v1_overall": {
+      "precision": 0.8333,
+      "recall": 0.7143,
+      "f1": 0.7692,
+      "accuracy": 0.7,
+      "ece": 0.2225
+    },
+    "v2_overall": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "accuracy": 1.0,
+      "ece": 0.145
+    },
+    "improvement": {
+      "recall_delta": 0.2857,
+      "precision_delta": 0.1667,
+      "f1_delta": 0.2308,
+      "accuracy_delta": 0.3,
+      "ece_delta": 0.0775
+    }
+  },
+  "v2_details": {
+    "by_violation_type": {
+      "EXTREME_WORDS": {
+        "total": 3,
+        "TP": 3,
+        "FP": 0,
+        "FN": 0,
+        "TN": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0
+      },
+      "NON_VIOLATION": {
+        "total": 6,
+        "TP": 0,
+        "FP": 0,
+        "FN": 0,
+        "TN": 6,
+        "precision": 0,
+        "recall": 0,
+        "f1": 0,
+        "accuracy": 1.0
+      },
+      "FALSE_PROMOTION": {
+        "total": 4,
+        "TP": 4,
+        "FP": 0,
+        "FN": 0,
+        "TN": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0
+      },
+      "COMPETITION_DENIGRATE": {
+        "total": 3,
+        "TP": 3,
+        "FP": 0,
+        "FN": 0,
+        "TN": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0
+      },
+      "INDUSTRY_PROHIBITION": {
+        "total": 4,
+        "TP": 4,
+        "FP": 0,
+        "FN": 0,
+        "TN": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "accuracy": 1.0
+      }
+    },
+    "calibration": {
+      "ece": 0.145,
+      "reliability_bins": [
+        {
+          "bin": 0,
+          "confidence_lower": 0.0,
+          "confidence_upper": 0.1,
+          "count": 0,
+          "accuracy": 0,
+          "avg_confidence": 0,
+          "gap": 0
+        },
+        {
+          "bin": 1,
+          "confidence_lower": 0.1,
+          "confidence_upper": 0.2,
+          "count": 0,
+          "accuracy": 0,
+          "avg_confidence": 0,
+          "gap": 0
+        },
+        {
+          "bin": 2,
+          "confidence_lower": 0.2,
+          "confidence_upper": 0.3,
+          "count": 0,
+          "accuracy": 0,
+          "avg_confidence": 0,
+          "gap": 0
+        },
+        {
+          "bin": 3,
+          "confidence_lower": 0.3,
+          "confidence_upper": 0.4,
+          "count": 0,
+          "accuracy": 0,
+          "avg_confidence": 0,
+          "gap": 0
+        },
+        {
+          "bin": 4,
+          "confidence_lower": 0.4,
+          "confidence_upper": 0.5,
+          "count": 0,
+          "accuracy": 0,
+          "avg_confidence": 0,
+          "gap": 0
+        },
+        {
+          "bin": 5,
+          "confidence_lower": 0.5,
+          "confidence_upper": 0.6,
+          "count": 0,
+          "accuracy": 0,
+          "avg_confidence": 0,
+          "gap": 0
+        },
+        {
+          "bin": 6,
+          "confidence_lower": 0.6,
+          "confidence_upper": 0.7,
+          "count": 1,
+          "accuracy": 1.0,
+          "avg_confidence": 0.65,
+          "gap": 0.35
+        },
+        {
+          "bin": 7,
+          "confidence_lower": 0.7,
+          "confidence_upper": 0.8,
+          "count": 5,
+          "accuracy": 1.0,
+          "avg_confidence": 0.72,
+          "gap": 0.28
+        },
+        {
+          "bin": 8,
+          "confidence_lower": 0.8,
+          "confidence_upper": 0.9,
+          "count": 3,
+          "accuracy": 1.0,
+          "avg_confidence": 0.8333,
+          "gap": 0.1667
+        },
+        {
+          "bin": 9,
+          "confidence_lower": 0.9,
+          "confidence_upper": 1.0,
+          "count": 11,
+          "accuracy": 1.0,
+          "avg_confidence": 0.9409,
+          "gap": 0.0591
+        }
+      ],
+      "avg_confidence": 0.855
+    },
+    "failure_analysis": {
+      "total_failures": 0,
+      "failure_rate": 0.0,
+      "false_positives": 0,
+      "false_negatives": 0,
+      "failure_reason_stats": {},
+      "failure_cases": []
+    },
+    "details": [
+      {
+        "id": 1,
+        "text": "全网最低价，买到就是赚到！限时特惠手慢无！",
+        "hit_word": "最低价",
+        "hit_category": "极限用语",
+        "industry": "ecommerce",
+        "expected_violation": true,
+        "expected_type": "EXTREME_WORDS",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "EXTREME_WORDS",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "营销语境中使用极限用语\"最低价\"",
+          "存在明确的促销推广意图"
+        ]
+      },
+      {
+        "id": 2,
+        "text": "这款手机搭载目前最高频率的骁龙8 Gen3处理器（3.4GHz）。",
+        "hit_word": "最高",
+        "hit_category": "极限用语",
+        "industry": "technology",
+        "expected_violation": false,
+        "expected_type": "NONE",
+        "expected_severity": "pass",
+        "is_boundary": false,
+        "predicted_violation": false,
+        "predicted_type": "EXTREME_WORDS",
+        "predicted_severity": "pass",
+        "confidence": 0.9,
+        "correct": true,
+        "evidence": [
+          "纯客观技术参数陈述"
+        ],
+        "mitigating_factors": [
+          "无营销推广意图"
+        ]
+      },
+      {
+        "id": 3,
+        "text": "可能是我用过最好用的面霜之一，个人非常推荐。",
+        "hit_word": "最好用",
+        "hit_category": "极限用语",
+        "industry": "cosmetic",
+        "expected_violation": true,
+        "expected_type": "EXTREME_WORDS",
+        "expected_severity": "low",
+        "is_boundary": true,
+        "predicted_violation": true,
+        "predicted_type": "EXTREME_WORDS",
+        "predicted_severity": "low",
+        "confidence": 0.65,
+        "correct": true,
+        "evidence": [
+          "存在营销意图：使用了\"最好用\"等宣传用语",
+          "极限用语即使加限定词仍属违规"
+        ],
+        "mitigating_factors": [
+          "使用了限定词软化绝对化表述"
+        ]
+      },
+      {
+        "id": 4,
+        "text": "本产品荣获国家级质量认证，品质有保障。",
+        "hit_word": "国家级",
+        "hit_category": "极限用语",
+        "industry": "manufacturing",
+        "expected_violation": true,
+        "expected_type": "EXTREME_WORDS",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "EXTREME_WORDS",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "营销语境中使用极限用语\"国家级\"",
+          "存在明确的促销推广意图"
+        ]
+      },
+      {
+        "id": 5,
+        "text": "我个人觉得这家店的咖啡是我喝过最好喝的。",
+        "hit_word": "最好喝",
+        "hit_category": "极限用语",
+        "industry": "food_service",
+        "expected_violation": false,
+        "expected_type": "NONE",
+        "expected_severity": "pass",
+        "is_boundary": false,
+        "predicted_violation": false,
+        "predicted_type": "EXTREME_WORDS",
+        "predicted_severity": "pass",
+        "confidence": 0.85,
+        "correct": true,
+        "evidence": [
+          "个人主观评价表达"
+        ],
+        "mitigating_factors": [
+          "非商业广告主身份"
+        ]
+      },
+      {
+        "id": 6,
+        "text": "本设备最大支持128GB内存扩展，最高传输速率达10Gbps。",
+        "hit_word": "最大",
+        "hit_category": "极限用语",
+        "industry": "technology",
+        "expected_violation": false,
+        "expected_type": "NONE",
+        "expected_severity": "pass",
+        "is_boundary": false,
+        "predicted_violation": false,
+        "predicted_type": "EXTREME_WORDS",
+        "predicted_severity": "pass",
+        "confidence": 0.9,
+        "correct": true,
+        "evidence": [
+          "纯客观技术参数陈述"
+        ],
+        "mitigating_factors": [
+          "无营销推广意图"
+        ]
+      },
+      {
+        "id": 7,
+        "text": "使用三天包瘦十斤，无效全额退款，不瘦不要钱！",
+        "hit_word": "包瘦",
+        "hit_category": "虚假宣传",
+        "industry": "healthcare",
+        "expected_violation": true,
+        "expected_type": "FALSE_PROMOTION",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "FALSE_PROMOTION",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "存在虚假宣传：使用\"包瘦\"等表述",
+          "存在效果保证承诺"
+        ]
+      },
+      {
+        "id": 8,
+        "text": "本品含维生素C和烟酰胺，有助于维持皮肤健康状态。",
+        "hit_word": "有助于",
+        "hit_category": "虚假宣传",
+        "industry": "cosmetic",
+        "expected_violation": false,
+        "expected_type": "NONE",
+        "expected_severity": "pass",
+        "is_boundary": false,
+        "predicted_violation": false,
+        "predicted_type": "FALSE_PROMOTION",
+        "predicted_severity": "pass",
+        "confidence": 0.85,
+        "correct": true,
+        "evidence": [
+          "成分功能的客观陈述"
+        ],
+        "mitigating_factors": [
+          "未作效果承诺"
+        ]
+      },
+      {
+        "id": 9,
+        "text": "很多老客户用了都说好，回购率超高，口碑有目共睹。",
+        "hit_word": "都说好",
+        "hit_category": "虚假宣传",
+        "industry": "ecommerce",
+        "expected_violation": true,
+        "expected_type": "FALSE_PROMOTION",
+        "expected_severity": "medium",
+        "is_boundary": true,
+        "predicted_violation": true,
+        "predicted_type": "FALSE_PROMOTION",
+        "predicted_severity": "medium",
+        "confidence": 0.7,
+        "correct": true,
+        "evidence": [
+          "存在宣传性表述：\"都说好\""
+        ]
+      },
+      {
+        "id": 10,
+        "text": "经过多家三甲医院临床验证，治愈率高达99%，永不复发。",
+        "hit_word": "治愈率",
+        "hit_category": "虚假宣传",
+        "industry": "healthcare",
+        "expected_violation": true,
+        "expected_type": "FALSE_PROMOTION",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "FALSE_PROMOTION",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "存在虚假宣传：使用\"治愈率\"等表述",
+          "涉及医疗效果宣称"
+        ]
+      },
+      {
+        "id": 11,
+        "text": "这款面膜我用着感觉还不错，皮肤好像水润了一些。",
+        "hit_word": "好像水润",
+        "hit_category": "虚假宣传",
+        "industry": "cosmetic",
+        "expected_violation": false,
+        "expected_type": "NONE",
+        "expected_severity": "pass",
+        "is_boundary": true,
+        "predicted_violation": false,
+        "predicted_type": "FALSE_PROMOTION",
+        "predicted_severity": "pass",
+        "confidence": 0.75,
+        "correct": true,
+        "evidence": [
+          "个人感受的模糊表达"
+        ],
+        "mitigating_factors": [
+          "未作确定性承诺"
+        ]
+      },
+      {
+        "id": 12,
+        "text": "上市三个月突破百万销量，行业遥遥领先，销量第一。",
+        "hit_word": "遥遥领先",
+        "hit_category": "虚假宣传",
+        "industry": "technology",
+        "expected_violation": true,
+        "expected_type": "FALSE_PROMOTION",
+        "expected_severity": "medium",
+        "is_boundary": true,
+        "predicted_violation": true,
+        "predicted_type": "FALSE_PROMOTION",
+        "predicted_severity": "medium",
+        "confidence": 0.7,
+        "correct": true,
+        "evidence": [
+          "存在宣传性表述：\"遥遥领先\""
+        ]
+      },
+      {
+        "id": 13,
+        "text": "比XX品牌省电50%，质量远超同行，吊打一切竞品。",
+        "hit_word": "吊打",
+        "hit_category": "对比贬低",
+        "industry": "manufacturing",
+        "expected_violation": true,
+        "expected_type": "COMPETITION_DENIGRATE",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "COMPETITION_DENIGRATE",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "使用强烈贬义词\"吊打\"贬低竞争对手",
+          "明确指向竞争对手"
+        ]
+      },
+      {
+        "id": 14,
+        "text": "经第三方机构SGS检测，本品电池容量为5000mAh，A品牌同款为4500mAh。",
+        "hit_word": "A品牌同款",
+        "hit_category": "对比贬低",
+        "industry": "technology",
+        "expected_violation": false,
+        "expected_type": "NONE",
+        "expected_severity": "pass",
+        "is_boundary": false,
+        "predicted_violation": false,
+        "predicted_type": "COMPETITION_DENIGRATE",
+        "predicted_severity": "pass",
+        "confidence": 0.8,
+        "correct": true,
+        "evidence": [
+          "有第三方数据支撑的参数对比"
+        ],
+        "mitigating_factors": [
+          "未使用贬义词"
+        ]
+      },
+      {
+        "id": 15,
+        "text": "行业内其他家都是垃圾品质，只有我们真材实料不偷工减料。",
+        "hit_word": "垃圾",
+        "hit_category": "对比贬低",
+        "industry": "manufacturing",
+        "expected_violation": true,
+        "expected_type": "COMPETITION_DENIGRATE",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "COMPETITION_DENIGRATE",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "使用强烈贬义词\"垃圾\"贬低竞争对手",
+          "明确指向竞争对手"
+        ]
+      },
+      {
+        "id": 16,
+        "text": "相比传统方案效率更高，帮助您节省更多时间成本。",
+        "hit_word": "效率更高",
+        "hit_category": "对比贬低",
+        "industry": "technology",
+        "expected_violation": true,
+        "expected_type": "COMPETITION_DENIGRATE",
+        "expected_severity": "medium",
+        "is_boundary": true,
+        "predicted_violation": true,
+        "predicted_type": "COMPETITION_DENIGRATE",
+        "predicted_severity": "medium",
+        "confidence": 0.7,
+        "correct": true,
+        "evidence": [
+          "存在对比性宣传表述"
+        ],
+        "mitigating_factors": [
+          "未明确点名具体竞争对手"
+        ]
+      },
+      {
+        "id": 17,
+        "text": "这款灵芝孢子粉可以治疗糖尿病，降血压立竿见影，根治三高。",
+        "hit_word": "治疗糖尿病",
+        "hit_category": "行业禁区",
+        "industry": "healthcare",
+        "expected_violation": true,
+        "expected_type": "INDUSTRY_PROHIBITION",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "INDUSTRY_PROHIBITION",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "行业禁区内容：\"治疗糖尿病\"",
+          "涉及疾病治疗功能宣称"
+        ]
+      },
+      {
+        "id": 18,
+        "text": "本理财产品年化收益15%以上，保本保息零风险，稳赚不赔。",
+        "hit_word": "保本保息",
+        "hit_category": "行业禁区",
+        "industry": "finance",
+        "expected_violation": true,
+        "expected_type": "INDUSTRY_PROHIBITION",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "INDUSTRY_PROHIBITION",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "行业禁区内容：\"保本保息\"",
+          "涉及保本保息承诺"
+        ]
+      },
+      {
+        "id": 19,
+        "text": "考研保过班不过全额退款，命题组老师亲自授课，押题命中率90%。",
+        "hit_word": "保过",
+        "hit_category": "行业禁区",
+        "industry": "education",
+        "expected_violation": true,
+        "expected_type": "INDUSTRY_PROHIBITION",
+        "expected_severity": "high",
+        "is_boundary": false,
+        "predicted_violation": true,
+        "predicted_type": "INDUSTRY_PROHIBITION",
+        "predicted_severity": "high",
+        "confidence": 0.95,
+        "correct": true,
+        "evidence": [
+          "行业禁区内容：\"保过\"",
+          "涉及保过承诺"
+        ]
+      },
+      {
+        "id": 20,
+        "text": "纯天然有机食品，零添加更健康，妈妈的安心之选。",
+        "hit_word": "纯天然",
+        "hit_category": "行业禁区",
+        "industry": "food",
+        "expected_violation": true,
+        "expected_type": "INDUSTRY_PROHIBITION",
+        "expected_severity": "medium",
+        "is_boundary": true,
+        "predicted_violation": true,
+        "predicted_type": "INDUSTRY_PROHIBITION",
+        "predicted_severity": "medium",
+        "confidence": 0.75,
+        "correct": true,
+        "evidence": [
+          "使用无法证明的表述\"纯天然\""
+        ],
+        "mitigating_factors": [
+          "属于模糊性宣称，需进一步核实"
+        ]
+      }
+    ]
+  }
+}

@@ -20,14 +20,25 @@ class VmemStore:
         """存储一条知识"""
         return self._store.store(key=key, value=value, source=source, tags=tags)
 
-    def search(self, query, top_k=5, source_filter=None):
-        """融合搜索。当指定 source_filter 时，先扩大候选集再过滤，避免漏掉特定来源的结果。"""
+    def search(self, query, top_k=5, source_filter=None,
+               w_vec=0.50, w_fts=0.20, w_time=0.10, w_conf=0.20):
+        """融合搜索。当指定 source_filter 时，先扩大候选集再过滤，避免漏掉特定来源的结果。
+
+        Args:
+            query: 查询文本
+            top_k: 返回结果数
+            source_filter: 来源过滤列表
+            w_vec: 向量相似度权重
+            w_fts: 全文检索权重
+            w_time: 时间衰减权重
+            w_conf: 置信度权重
+        """
         query_emb = self._engine.encode([query])[0]
         # 如果有来源过滤，扩大候选集以确保各来源都有机会入选
         fetch_k = top_k * 10 if source_filter else top_k
         results = self._store.search_fusion(
             query=query, query_emb=query_emb, top_k=fetch_k,
-            w_vec=0.50, w_fts=0.20, w_time=0.10, w_conf=0.20,
+            w_vec=w_vec, w_fts=w_fts, w_time=w_time, w_conf=w_conf,
             topic_filter=None
         )
         # 按 source_filter 过滤
@@ -50,6 +61,37 @@ class VmemStore:
     def get_stats(self):
         """获取统计信息"""
         return self._store.get_stats()
+
+    def update_confidence(self, key: str, delta: float) -> bool:
+        """根据反馈更新指定条目的置信度。
+
+        Args:
+            key: 知识条目 key
+            delta: 置信度变化量（正数提升，负数降低）
+
+        Returns:
+            True 表示更新成功
+        """
+        return self._store.update_confidence(key, delta)
+
+    def update_confidence_by_keyword(self, keyword: str, delta: float) -> int:
+        """根据关键词匹配更新相关条目的置信度。
+
+        在禁用词反馈场景中，keyword 通常是禁用词本身或违规 ID。
+        找到 value 中包含该关键词的所有条目，批量调整置信度。
+
+        Args:
+            keyword: 关键词
+            delta: 置信度变化量
+
+        Returns:
+            更新的条目数量
+        """
+        return self._store.update_confidence_by_keyword(keyword, delta)
+
+    def get_confidence(self, key: str) -> float:
+        """获取指定条目的置信度。"""
+        return self._store.get_confidence(key)
 
     def close(self):
         self._store.close()

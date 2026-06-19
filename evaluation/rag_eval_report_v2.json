@@ -1,0 +1,863 @@
+{
+  "time": "2026-06-19 19:45:34",
+  "version": "v2",
+  "total_cases": 30,
+  "overall": {
+    "recall_at_5": 0.9666666666666667,
+    "mrr": 0.95,
+    "precision_at_1": 0.9333333333333333,
+    "precision_at_3": 0.9666666666666667,
+    "precision_at_5": 0.9666666666666667
+  },
+  "by_query_type": {
+    "law": {
+      "total": 8,
+      "hits": 7,
+      "recall": 0.875,
+      "P@1": 0.75,
+      "P@3": 0.875,
+      "P@5": 0.875,
+      "MRR": 0.8125
+    },
+    "case": {
+      "total": 8,
+      "hits": 8,
+      "recall": 1.0,
+      "P@1": 1.0,
+      "P@3": 1.0,
+      "P@5": 1.0,
+      "MRR": 1.0
+    },
+    "rule": {
+      "total": 8,
+      "hits": 8,
+      "recall": 1.0,
+      "P@1": 1.0,
+      "P@3": 1.0,
+      "P@5": 1.0,
+      "MRR": 1.0
+    },
+    "general": {
+      "total": 6,
+      "hits": 6,
+      "recall": 1.0,
+      "P@1": 1.0,
+      "P@3": 1.0,
+      "P@5": 1.0,
+      "MRR": 1.0
+    }
+  },
+  "failure_analysis": {
+    "total_failures": 1,
+    "failure_rate": 0.0333,
+    "failure_reason_stats": {
+      "source_found_but_ranked_low": 1,
+      "keyword_mismatch": 1
+    },
+    "failure_cases": [
+      {
+        "id": 1,
+        "query": "全网最低价算不算违规",
+        "query_type_expected": "law",
+        "query_type_detected": "law",
+        "failure_reasons": [
+          "source_found_but_ranked_low：来源存在但排名低于 top-5",
+          "keyword_mismatch：来源匹配但内容关键词不足"
+        ],
+        "sources": [
+          "ad_law",
+          "ad_law",
+          "penalty_case",
+          "penalty_case",
+          "penalty_case"
+        ]
+      }
+    ]
+  },
+  "details": [
+    {
+      "id": 1,
+      "query": "全网最低价算不算违规",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": false,
+      "hit_top1": false,
+      "hit_top3": false,
+      "hit_top5": false,
+      "reciprocal_rank": 0.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.5837,
+        0.4935,
+        0.4725,
+        0.4719,
+        0.461
+      ],
+      "failure_reasons": [
+        "source_found_but_ranked_low：来源存在但排名低于 top-5",
+        "keyword_mismatch：来源匹配但内容关键词不足"
+      ]
+    },
+    {
+      "id": 2,
+      "query": "广告中使用国家级最好第一等词汇有什么法律后果",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "penalty_case"
+      ],
+      "scores": [
+        0.9789,
+        0.6749,
+        0.6692,
+        0.6596,
+        0.4725
+      ]
+    },
+    {
+      "id": 3,
+      "query": "食品广告能不能宣传治疗功效",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        1.0125,
+        0.889,
+        0.5543,
+        0.5429,
+        0.5106
+      ]
+    },
+    {
+      "id": 4,
+      "query": "未满十周岁的未成年人能不能做广告代言",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        1.0125,
+        1.0118,
+        0.9964,
+        0.6099,
+        0.5409
+      ]
+    },
+    {
+      "id": 5,
+      "query": "虚假广告的认定标准是什么",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        1.0125,
+        0.8914,
+        0.8863,
+        0.819,
+        0.6464
+      ]
+    },
+    {
+      "id": 6,
+      "query": "广告法第九条规定了哪些禁止情形",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": false,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 0.5,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        1.0125,
+        0.9326,
+        0.8947,
+        0.7777,
+        0.7605
+      ]
+    },
+    {
+      "id": 7,
+      "query": "绝对化用语的罚款标准是多少",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        0.8351,
+        0.7836,
+        0.7781,
+        0.7766,
+        0.7418
+      ]
+    },
+    {
+      "id": 8,
+      "query": "什么是虚假广告，如何认定",
+      "query_type_expected": "law",
+      "query_type_detected": "law",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        1.0125,
+        0.9,
+        0.8852,
+        0.8048,
+        0.6495
+      ]
+    },
+    {
+      "id": 9,
+      "query": "某化妆品公司因虚假宣传被罚了多少",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.6858,
+        0.6495,
+        0.6259,
+        0.6074
+      ]
+    },
+    {
+      "id": 10,
+      "query": "电商平台使用极限用语被处罚的案例",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.8568,
+        0.8349,
+        0.8094,
+        0.7722
+      ]
+    },
+    {
+      "id": 11,
+      "query": "保健食品广告违规处罚案例有哪些",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8621,
+        0.8444,
+        0.7022,
+        0.6916,
+        0.6389
+      ]
+    },
+    {
+      "id": 12,
+      "query": "直播间虚假宣传被罚款的典型案例",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.7296,
+        0.7095,
+        0.7054,
+        0.6782
+      ]
+    },
+    {
+      "id": 13,
+      "query": "教育培训广告承诺包过包就业被处罚的案例",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.7466,
+        0.6784,
+        0.6396,
+        0.6202
+      ]
+    },
+    {
+      "id": 14,
+      "query": "房地产虚假宣传被罚案例",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.6686,
+        0.621,
+        0.6073,
+        0.5938
+      ]
+    },
+    {
+      "id": 15,
+      "query": "名人代言虚假广告会怎么处罚",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.7101,
+        0.6916,
+        0.6915,
+        0.6861
+      ]
+    },
+    {
+      "id": 16,
+      "query": "金融理财虚假宣传被处罚的案例",
+      "query_type_expected": "case",
+      "query_type_detected": "case",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case",
+        "penalty_case"
+      ],
+      "scores": [
+        0.8625,
+        0.8112,
+        0.7961,
+        0.7812,
+        0.7773
+      ]
+    },
+    {
+      "id": 17,
+      "query": "抖音平台对广告内容有哪些审核规则",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.7875,
+        0.7132,
+        0.3302,
+        0.3144,
+        0.3053
+      ]
+    },
+    {
+      "id": 18,
+      "query": "小红书上的种草笔记算不算广告需要标注吗",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.7875,
+        0.4946,
+        0.4478,
+        0.3873,
+        0.305
+      ]
+    },
+    {
+      "id": 19,
+      "query": "化妆品广告中可以使用前后对比效果图吗",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.7875,
+        0.3182,
+        0.2951,
+        0.2877,
+        0.278
+      ]
+    },
+    {
+      "id": 20,
+      "query": "金融理财产品广告有哪些合规要求",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.715,
+        0.576,
+        0.455,
+        0.4304,
+        0.3807
+      ]
+    },
+    {
+      "id": 21,
+      "query": "房地产广告中关于面积和距离的表述规范是什么",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "ad_law",
+        "ad_law",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.604,
+        0.3675,
+        0.363,
+        0.3262,
+        0.3119
+      ]
+    },
+    {
+      "id": 22,
+      "query": "直播带货保健食品需要注意什么",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "ad_law",
+        "industry_rule",
+        "penalty_case",
+        "ad_law"
+      ],
+      "scores": [
+        0.7875,
+        0.3515,
+        0.3279,
+        0.3077,
+        0.2718
+      ]
+    },
+    {
+      "id": 23,
+      "query": "医疗美容广告有哪些禁止内容",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.7483,
+        0.7417,
+        0.7252,
+        0.7207,
+        0.6846
+      ]
+    },
+    {
+      "id": 24,
+      "query": "教育培训广告不能用什么话术",
+      "query_type_expected": "rule",
+      "query_type_detected": "rule",
+      "is_boundary": false,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "ad_law",
+        "penalty_case",
+        "industry_rule"
+      ],
+      "scores": [
+        0.6403,
+        0.4332,
+        0.3675,
+        0.2574,
+        0.2561
+      ]
+    },
+    {
+      "id": 25,
+      "query": "广告违规处罚有哪些类型",
+      "query_type_expected": "general",
+      "query_type_detected": "law",
+      "is_boundary": true,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "penalty_case",
+        "penalty_case",
+        "ad_law",
+        "penalty_case"
+      ],
+      "scores": [
+        0.6508,
+        0.4725,
+        0.4662,
+        0.4597,
+        0.4282
+      ]
+    },
+    {
+      "id": 26,
+      "query": "化妆品广告合规审查要点",
+      "query_type_expected": "general",
+      "query_type_detected": "rule",
+      "is_boundary": true,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule",
+        "industry_rule"
+      ],
+      "scores": [
+        0.7875,
+        0.5102,
+        0.4039,
+        0.3841,
+        0.2962
+      ]
+    },
+    {
+      "id": 27,
+      "query": "虚假宣传怎么举报，会受到什么处罚",
+      "query_type_expected": "general",
+      "query_type_detected": "law",
+      "is_boundary": true,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "penalty_case",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        0.5281,
+        0.5155,
+        0.4725,
+        0.4724,
+        0.4706
+      ]
+    },
+    {
+      "id": 28,
+      "query": "互联网广告有什么特别规定",
+      "query_type_expected": "general",
+      "query_type_detected": "law",
+      "is_boundary": true,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        1.0125,
+        0.3247,
+        0.2328,
+        0.2143,
+        0.2089
+      ]
+    },
+    {
+      "id": 29,
+      "query": "广告代言需要注意哪些法律问题",
+      "query_type_expected": "general",
+      "query_type_detected": "law",
+      "is_boundary": true,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "penalty_case"
+      ],
+      "scores": [
+        0.938,
+        0.7709,
+        0.5069,
+        0.4902,
+        0.4725
+      ]
+    },
+    {
+      "id": 30,
+      "query": "常见的广告违法情形有哪些",
+      "query_type_expected": "general",
+      "query_type_detected": "general",
+      "is_boundary": true,
+      "passed": true,
+      "hit_top1": true,
+      "hit_top3": true,
+      "hit_top5": true,
+      "reciprocal_rank": 1.0,
+      "sources": [
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law",
+        "ad_law"
+      ],
+      "scores": [
+        0.65,
+        0.6444,
+        0.6209,
+        0.5668,
+        0.5591
+      ]
+    }
+  ]
+}
