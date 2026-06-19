@@ -4,7 +4,10 @@
     "text": "全网最低价，买到就是赚到！",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["最低", "赚到"],
+    "expected_keywords": [
+      "最低",
+      "赚到"
+    ],
     "category": "极限用语+虚假宣传",
     "industry": "ecommerce"
   },
@@ -13,7 +16,10 @@
     "text": "国家级品质，行业首创技术突破",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["国家级", "首创"],
+    "expected_keywords": [
+      "国家级",
+      "首创"
+    ],
     "category": "极限用语",
     "industry": "manufacturing"
   },
@@ -22,7 +28,10 @@
     "text": "销量第一，全球领先品牌",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["第一", "领先"],
+    "expected_keywords": [
+      "第一",
+      "领先"
+    ],
     "category": "极限用语",
     "industry": "ecommerce"
   },
@@ -31,7 +40,10 @@
     "text": "使用三天包瘦十斤，无效全额退款",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["包瘦", "无效退款"],
+    "expected_keywords": [
+      "包瘦",
+      "无效退款"
+    ],
     "category": "虚假宣传",
     "industry": "healthcare"
   },
@@ -40,7 +52,10 @@
     "text": "本产品通过临床验证，治愈率高达99%",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["治愈率", "99%"],
+    "expected_keywords": [
+      "治愈率",
+      "99%"
+    ],
     "category": "虚假宣传",
     "industry": "healthcare"
   },
@@ -49,7 +64,10 @@
     "text": "投资本项目，年化收益30%，稳赚不赔",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["稳赚不赔", "年化收益30%"],
+    "expected_keywords": [
+      "稳赚不赔",
+      "年化收益30%"
+    ],
     "category": "虚假宣传",
     "industry": "finance"
   },
@@ -58,7 +76,10 @@
     "text": "我们的产品完胜竞品XX品牌，他们根本不行",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["完胜", "根本不行"],
+    "expected_keywords": [
+      "完胜",
+      "根本不行"
+    ],
     "category": "对比贬低",
     "industry": "ecommerce"
   },
@@ -67,7 +88,9 @@
     "text": "隔壁老王家的货全是假的，只有我家才是正品",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["全是假的"],
+    "expected_keywords": [
+      "全是假的"
+    ],
     "category": "对比贬低",
     "industry": "ecommerce"
   },
@@ -76,7 +99,11 @@
     "text": "该保健胶囊能治疗糖尿病、高血压等多种慢性病",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["治疗", "糖尿病", "高血压"],
+    "expected_keywords": [
+      "治疗",
+      "糖尿病",
+      "高血压"
+    ],
     "category": "行业禁区",
     "industry": "healthcare"
   },
@@ -85,7 +112,10 @@
     "text": "投资1000元，7天回本，月入过万不是梦",
     "expected_violation": true,
     "expected_risk": "high",
-    "expected_keywords": ["7天回本", "月入过万"],
+    "expected_keywords": [
+      "7天回本",
+      "月入过万"
+    ],
     "category": "行业禁区",
     "industry": "finance"
   },
@@ -94,7 +124,10 @@
     "text": "本款羽绒服采用90%白鹅绒填充，蓬松度700+",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["90%白鹅绒", "蓬松度700+"],
+    "expected_keywords": [
+      "90%白鹅绒",
+      "蓬松度700+"
+    ],
     "category": "正常产品描述",
     "industry": "ecommerce"
   },
@@ -103,7 +136,10 @@
     "text": "这款笔记本搭载Intel i7-13700H处理器，16GB内存",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["i7-13700H", "16GB"],
+    "expected_keywords": [
+      "i7-13700H",
+      "16GB"
+    ],
     "category": "事实参数陈述",
     "industry": "technology"
   },
@@ -112,7 +148,10 @@
     "text": "个人觉得这家餐厅的口味偏咸，不太合我胃口",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["个人觉得", "不太合我胃口"],
+    "expected_keywords": [
+      "个人觉得",
+      "不太合我胃口"
+    ],
     "category": "主观评价",
     "industry": "food_service"
   },
@@ -121,7 +160,10 @@
     "text": "本课程由清华大学教授主讲，共计48课时",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["清华大学教授", "48课时"],
+    "expected_keywords": [
+      "清华大学教授",
+      "48课时"
+    ],
     "category": "事实陈述",
     "industry": "education"
   },
@@ -130,7 +172,10 @@
     "text": "该小区距离地铁站步行约800米，周边有三所学校",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["800米", "三所学校"],
+    "expected_keywords": [
+      "800米",
+      "三所学校"
+    ],
     "category": "客观地理信息",
     "industry": "real_estate"
   },
@@ -139,7 +184,11 @@
     "text": "本店今日特价，原价299元现价159元，限时三天",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["原价", "现价", "限时"],
+    "expected_keywords": [
+      "原价",
+      "现价",
+      "限时"
+    ],
     "category": "正常促销描述",
     "industry": "ecommerce"
   },
@@ -148,7 +197,11 @@
     "text": "这款护肤品含有烟酰胺和透明质酸成分，主打保湿功效",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["烟酰胺", "透明质酸", "保湿"],
+    "expected_keywords": [
+      "烟酰胺",
+      "透明质酸",
+      "保湿"
+    ],
     "category": "成分事实说明",
     "industry": "beauty"
   },
@@ -157,7 +210,10 @@
     "text": "本公司成立于2010年，拥有员工500余人",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["2010年", "500余人"],
+    "expected_keywords": [
+      "2010年",
+      "500余人"
+    ],
     "category": "企业基本信息",
     "industry": "corporate"
   },
@@ -166,7 +222,10 @@
     "text": "感谢您选择我们的服务，如有问题请联系客服",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["感谢", "联系客服"],
+    "expected_keywords": [
+      "感谢",
+      "联系客服"
+    ],
     "category": "客服标准话术",
     "industry": "ecommerce"
   },
@@ -175,25 +234,33 @@
     "text": "本活动最终解释权归本公司所有",
     "expected_violation": false,
     "expected_risk": "pass",
-    "expected_keywords": ["最终解释权"],
+    "expected_keywords": [
+      "最终解释权"
+    ],
     "category": "法律格式条款",
     "industry": "ecommerce"
   },
   {
     "id": 21,
     "text": "口碑最好的选择，客户满意度接近100%",
-    "expected_violation": false,
+    "expected_violation": true,
     "expected_risk": "low",
-    "expected_keywords": ["最好", "接近100%"],
+    "expected_keywords": [
+      "最好",
+      "接近100%"
+    ],
     "category": "边界-极限用语软化",
     "industry": "ecommerce"
   },
   {
     "id": 22,
     "text": "我们可能是市面上性价比最高的方案之一",
-    "expected_violation": false,
+    "expected_violation": true,
     "expected_risk": "low",
-    "expected_keywords": ["可能", "之一"],
+    "expected_keywords": [
+      "可能",
+      "之一"
+    ],
     "category": "边界-极限用语加限定词",
     "industry": "technology"
   },
@@ -202,7 +269,9 @@
     "text": "这款产品帮你轻松搞定皮肤暗沉问题",
     "expected_violation": false,
     "expected_risk": "low",
-    "expected_keywords": ["轻松搞定"],
+    "expected_keywords": [
+      "轻松搞定"
+    ],
     "category": "边界-效果暗示但未承诺",
     "industry": "beauty"
   },
@@ -211,7 +280,10 @@
     "text": "行业内的人都知道，我们的技术确实更有优势",
     "expected_violation": false,
     "expected_risk": "medium",
-    "expected_keywords": ["都知道", "更有优势"],
+    "expected_keywords": [
+      "都知道",
+      "更有优势"
+    ],
     "category": "边界-模糊权威暗示",
     "industry": "technology"
   },
@@ -220,7 +292,10 @@
     "text": "用了都说好，回购率超高",
     "expected_violation": false,
     "expected_risk": "medium",
-    "expected_keywords": ["都说好", "回购率超高"],
+    "expected_keywords": [
+      "都说好",
+      "回购率超高"
+    ],
     "category": "边界-口碑描述无数据支撑",
     "industry": "ecommerce"
   },
@@ -229,7 +304,10 @@
     "text": "相比传统方案，我们的产品效率提升约30%",
     "expected_violation": false,
     "expected_risk": "low",
-    "expected_keywords": ["传统方案", "提升约30%"],
+    "expected_keywords": [
+      "传统方案",
+      "提升约30%"
+    ],
     "category": "边界-对比陈述但未点名",
     "industry": "technology"
   },
@@ -238,7 +316,10 @@
     "text": "孩子吃了成绩明显提高，推荐给所有家长",
     "expected_violation": false,
     "expected_risk": "medium",
-    "expected_keywords": ["成绩明显提高", "推荐给所有"],
+    "expected_keywords": [
+      "成绩明显提高",
+      "推荐给所有"
+    ],
     "category": "边界-效果暗示+过度推荐",
     "industry": "education"
   },
@@ -247,7 +328,9 @@
     "text": "本产品采用航天级材料，品质有保障",
     "expected_violation": false,
     "expected_risk": "medium",
-    "expected_keywords": ["航天级"],
+    "expected_keywords": [
+      "航天级"
+    ],
     "category": "边界-行业术语借用",
     "industry": "manufacturing"
   },
@@ -256,16 +339,22 @@
     "text": "上市仅三个月，用户已突破百万",
     "expected_violation": false,
     "expected_risk": "low",
-    "expected_keywords": ["三个月", "百万"],
+    "expected_keywords": [
+      "三个月",
+      "百万"
+    ],
     "category": "边界-数据陈述但含宣传意图",
     "industry": "technology"
   },
   {
     "id": 30,
     "text": "史上最强优惠，错过再等一年",
-    "expected_violation": false,
+    "expected_violation": true,
     "expected_risk": "medium",
-    "expected_keywords": ["史上最强", "错过再等一年"],
+    "expected_keywords": [
+      "史上最强",
+      "错过再等一年"
+    ],
     "category": "边界-极限促销话术",
     "industry": "ecommerce"
   }

@@ -81,11 +81,11 @@ class ReviewStore:
                 "FROM reviews ORDER BY created_at DESC LIMIT 10"
             ).fetchall()
             return {
-                "total_reviews": total_reviews,
-                "total_violations": total_violations,
-                "violation_by_category": [{"category": k, "count": v} for k, v in category_counts.items()],
-                "violation_by_severity": [{"severity": k, "count": v} for k, v in severity_counts.items()],
-                "recent_reviews": [
+                "totalReviews": total_reviews,
+                "totalViolations": total_violations,
+                "violationByCategory": [{"category": k, "count": v} for k, v in category_counts.items()],
+                "violationBySeverity": [{"severity": k, "count": v} for k, v in severity_counts.items()],
+                "recentReviews": [
                     {"reviewId": r[0], "text": r[1], "status": r[2],
                      "overallRisk": r[3], "violationCount": r[4]}
                     for r in recent

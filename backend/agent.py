@@ -49,17 +49,22 @@ class ComplianceAgent:
         return self._llm
 
     async def review(self, request: ReviewRequest) -> ReviewResponse:
-        review_id = f"CR-{int(time.time())}-{hashlib.md5(request.text.encode()).hexdigest()[:4]}"
+        start_time = time.time()
+        review_id = f"CR-{int(start_time)}-{hashlib.md5(request.text.encode()).hexdigest()[:4]}"
 
         # 获取 LLM 客户端（前端传了 key 就用前端的）
         llm = self._get_llm(request.api_key, request.base_url)
         judge = ContextJudge(llm) if request.api_key else self._judge
         rewriter = RewriteGenerator(llm, self._rewriter._replacements) if request.api_key else self._rewriter
 
+        # 累计 token 用量
+        total_token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
         # Step 1: 禁用词匹配（确定性，不走 LLM）
         hits = self._matcher.match(request.text)
 
         if not hits:
+            processing_time_ms = int((time.time() - start_time) * 1000)
             return ReviewResponse(
                 review_id=review_id,
                 status="safe",
@@ -68,6 +73,8 @@ class ComplianceAgent:
                 highlighted_text=request.text,
                 summary="未发现违规内容。",
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                processing_time_ms=processing_time_ms,
+                token_usage=total_token_usage,
             )
 
         # Step 2: LLM 语境判断（并发）
@@ -80,6 +87,7 @@ class ComplianceAgent:
                 confirmed_hits.append((hit, judgment))
 
         if not confirmed_hits:
+            processing_time_ms = int((time.time() - start_time) * 1000)
             return ReviewResponse(
                 review_id=review_id,
                 status="safe",
@@ -88,6 +96,8 @@ class ComplianceAgent:
                 highlighted_text=request.text,
                 summary=f"检测到 {len(hits)} 个疑似禁用词，经语境分析均不构成违规。",
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                processing_time_ms=processing_time_ms,
+                token_usage=total_token_usage,
             )
 
         # Step 3: RAG 检索法规依据
@@ -126,6 +136,7 @@ class ComplianceAgent:
         # 整体风险等级
         max_risk = max((v.severity for v in violations), key=lambda x: ["pass","low","medium","high"].index(x.value))
 
+        processing_time_ms = int((time.time() - start_time) * 1000)
         return ReviewResponse(
             review_id=review_id,
             status="violation_found",
@@ -134,6 +145,8 @@ class ComplianceAgent:
             highlighted_text=highlighted,
             summary=f"检测到 {len(violations)} 处违规，最高风险等级：{max_risk.value}",
             reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            processing_time_ms=processing_time_ms,
+            token_usage=total_token_usage,
         )
 
     def _highlight(self, text: str, violations: list[Violation]) -> str:

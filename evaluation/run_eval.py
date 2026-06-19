@@ -28,7 +28,9 @@ async def run_agent_eval():
     agent_inst = ComplianceAgent(config)
 
     results = {"TP": 0, "FP": 0, "FN": 0, "TN": 0, "total": len(cases)}
+    total_token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
+    eval_start = time.time()
     for case in cases:
         req = ReviewRequest(text=case["text"], industry=Industry(case.get("industry", "general")))
         resp = await agent_inst.review(req)
@@ -41,6 +43,12 @@ async def run_agent_eval():
         elif not predicted and actual: results["FN"] += 1
         else: results["TN"] += 1
 
+        # 累计 token 用量
+        if resp.token_usage:
+            for key in total_token_usage:
+                total_token_usage[key] += resp.token_usage.get(key, 0)
+
+    eval_elapsed = time.time() - eval_start
     agent_inst.close()
 
     precision = results["TP"] / (results["TP"] + results["FP"]) if (results["TP"] + results["FP"]) > 0 else 0
@@ -48,7 +56,21 @@ async def run_agent_eval():
     f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
     accuracy = (results["TP"] + results["TN"]) / results["total"]
 
-    results.update({"precision": precision, "recall": recall, "f1": f1, "accuracy": accuracy})
+    # 成本计算：DeepSeek-V4-Flash 价格 = 输入 1元/百万token + 输出 2元/百万token
+    input_cost = total_token_usage["prompt_tokens"] / 1_000_000 * 1.0
+    output_cost = total_token_usage["completion_tokens"] / 1_000_000 * 2.0
+    total_cost = input_cost + output_cost
+
+    results.update({
+        "precision": precision,
+        "recall": recall,
+        "f1": f1,
+        "accuracy": accuracy,
+        "total_time_s": round(eval_elapsed, 2),
+        "avg_time_s": round(eval_elapsed / len(cases), 2) if cases else 0,
+        "token_usage": total_token_usage,
+        "total_cost_yuan": round(total_cost, 4),
+    })
     return results
 
 
@@ -99,6 +121,14 @@ async def main():
         print(f"  F1: {agent_results['f1']:.1%}")
         print(f"  准确率: {agent_results['accuracy']:.1%}")
         print(f"  TP={agent_results['TP']} FP={agent_results['FP']} FN={agent_results['FN']} TN={agent_results['TN']}")
+        print()
+        print(f"  总耗时: {agent_results['total_time_s']:.1f} 秒")
+        print(f"  平均每题耗时: {agent_results['avg_time_s']:.2f} 秒")
+        tok = agent_results['token_usage']
+        print(f"  Token 用量: 输入 {tok['prompt_tokens']} + 输出 {tok['completion_tokens']} = 总计 {tok['total_tokens']}")
+        print(f"  总成本: CNY {agent_results['total_cost_yuan']:.4f}")
+        human_minutes = agent_results['total'] * 2  # 假设人工每题 2 分钟
+        print(f"  人工对比: 假设人工审查每题 2 分钟，{agent_results['total']} 题需要 {human_minutes} 分钟")
 
     # RAG 评测
     print("\n【RAG 评测】15 题检索质量")

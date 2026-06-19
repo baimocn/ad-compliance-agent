@@ -96,6 +96,8 @@ class ReviewResponse(BaseModel):
     highlighted_text: str
     summary: str
     reviewed_at: str
+    processing_time_ms: Optional[int] = None
+    token_usage: Optional[dict] = None
 
 
 class FeedbackRequest(BaseModel):
@@ -112,13 +114,12 @@ class FeedbackResponse(BaseModel):
 
 
 class StatsResponse(BaseModel):
-    total_reviews: int = 0
-    total_violations: int = 0
-    violation_by_category: list[dict] = []
-    violation_by_severity: list[dict] = []
-    violation_by_industry: list[dict] = []
-    recent_reviews: list[dict] = []
-    avg_risk_score: float = 0.0
+    model_config = {"extra": "allow"}
+    totalReviews: int = 0
+    totalViolations: int = 0
+    violationByCategory: list[dict] = []
+    violationBySeverity: list[dict] = []
+    recentReviews: list[dict] = []
 
 
 # 行业中英文映射
