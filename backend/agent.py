@@ -10,7 +10,7 @@ sys.path.insert(0, str(_PROJECT))
 
 from schemas import (
     ReviewRequest, ReviewResponse, Violation, RiskLevel,
-    Suggestion, RelatedCase, BannedWordHit
+    Suggestion, RelatedCase, BannedWordHit, PipelineStep
 )
 from tools.banned_word import BannedWordMatcher
 from tools.context_judge import ContextJudge
@@ -60,10 +60,17 @@ class ComplianceAgent:
         # 累计 token 用量
         total_token_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
 
+        # Pipeline steps 追踪
+        pipeline_steps: list[PipelineStep] = []
+
         # Step 1: 禁用词匹配（确定性，不走 LLM）
         hits = self._matcher.match(request.text)
 
         if not hits:
+            pipeline_steps.append(PipelineStep(
+                step=1, name="禁用词匹配", status="completed",
+                detail=f"扫描完成，未命中任何禁用词", icon="🔍"
+            ))
             processing_time_ms = int((time.time() - start_time) * 1000)
             return ReviewResponse(
                 review_id=review_id,
@@ -75,18 +82,39 @@ class ComplianceAgent:
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 processing_time_ms=processing_time_ms,
                 token_usage=total_token_usage,
+                pipeline_steps=pipeline_steps,
             )
+
+        pipeline_steps.append(PipelineStep(
+            step=1, name="禁用词匹配", status="completed",
+            detail=f"命中 {len(hits)} 个疑似禁用词", icon="🔍"
+        ))
 
         # Step 2: LLM 语境判断（并发）
         judgments = await judge.batch_judge(request.text, hits, request.industry.value)
 
         # 过滤掉不违规的命中
         confirmed_hits = []
+        rejected_count = 0
         for hit, judgment in zip(hits, judgments):
             if judgment.is_violation:
                 confirmed_hits.append((hit, judgment))
+            else:
+                rejected_count += 1
 
         if not confirmed_hits:
+            pipeline_steps.append(PipelineStep(
+                step=2, name="LLM 语境判断", status="completed",
+                detail=f"确认 0 个违规，排除 {rejected_count} 个误报", icon="🧠"
+            ))
+            pipeline_steps.append(PipelineStep(
+                step=3, name="RAG 法规检索", status="skipped",
+                detail="无确认违规，跳过法规检索", icon="📚"
+            ))
+            pipeline_steps.append(PipelineStep(
+                step=4, name="替代建议生成", status="skipped",
+                detail="无确认违规，跳过建议生成", icon="✏️"
+            ))
             processing_time_ms = int((time.time() - start_time) * 1000)
             return ReviewResponse(
                 review_id=review_id,
@@ -98,12 +126,20 @@ class ComplianceAgent:
                 reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
                 processing_time_ms=processing_time_ms,
                 token_usage=total_token_usage,
+                pipeline_steps=pipeline_steps,
             )
+
+        pipeline_steps.append(PipelineStep(
+            step=2, name="LLM 语境判断", status="completed",
+            detail=f"确认 {len(confirmed_hits)} 个违规，排除 {rejected_count} 个误报", icon="🧠"
+        ))
 
         # Step 3: RAG 检索法规依据
         violations = []
+        total_rag_sources = 0
         for hit, judgment in confirmed_hits:
             rag_results = self._rag.search(hit.word, request.industry.value, top_k=3)
+            total_rag_sources += len(rag_results)
 
             # 确定风险等级
             severity = RiskLevel.HIGH if judgment.confidence > 0.8 else RiskLevel.MEDIUM
@@ -115,12 +151,18 @@ class ComplianceAgent:
                 end_index=hit.position[1],
                 severity=severity,
                 category=hit.category,
+                confidence=judgment.confidence,
                 law_article=hit.regulation_ref,
                 law_content=rag_results[0].get('value', '')[:200] if rag_results else "",
                 explanation=judgment.reasoning,
                 suggestions=[],
                 related_cases=[],
             ))
+
+        pipeline_steps.append(PipelineStep(
+            step=3, name="RAG 法规检索", status="completed",
+            detail=f"检索到 {total_rag_sources} 条法规依据", icon="📚"
+        ))
 
         # Step 4: 生成替代建议
         suggestions = await rewriter.generate(
@@ -129,6 +171,11 @@ class ComplianceAgent:
         )
         for v, s in zip(violations, suggestions):
             v.suggestions = [s]
+
+        pipeline_steps.append(PipelineStep(
+            step=4, name="替代建议生成", status="completed",
+            detail=f"生成 {len(suggestions)} 条合规替代建议", icon="✏️"
+        ))
 
         # 生成高亮文本
         highlighted = self._highlight(request.text, violations)
@@ -147,6 +194,7 @@ class ComplianceAgent:
             reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
             processing_time_ms=processing_time_ms,
             token_usage=total_token_usage,
+            pipeline_steps=pipeline_steps,
         )
 
     def _highlight(self, text: str, violations: list[Violation]) -> str:

@@ -73,6 +73,7 @@ class Violation(BaseModel):
     end_index: int
     severity: RiskLevel
     category: str
+    confidence: float = Field(default=0.5, ge=0, le=1, description="Agent 判断置信度")
     law_article: str
     law_content: str
     explanation: str
@@ -88,6 +89,14 @@ class ReviewRequest(BaseModel):
     base_url: Optional[str] = Field(default=None, description="LLM API Base URL")
 
 
+class PipelineStep(BaseModel):
+    step: int
+    name: str
+    status: str  # "completed" | "skipped"
+    detail: str
+    icon: str  # emoji
+
+
 class ReviewResponse(BaseModel):
     review_id: str
     status: str  # "safe" | "violation_found"
@@ -98,6 +107,7 @@ class ReviewResponse(BaseModel):
     reviewed_at: str
     processing_time_ms: Optional[int] = None
     token_usage: Optional[dict] = None
+    pipeline_steps: list[PipelineStep] = []
 
 
 class FeedbackRequest(BaseModel):
