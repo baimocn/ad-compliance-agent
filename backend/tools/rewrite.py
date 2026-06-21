@@ -7,6 +7,8 @@ sys.path.insert(0, str(_PROJECT / 'backend'))
 from schemas import Suggestion
 
 
+
+
 class RewriteGenerator:
     def __init__(self, llm, replacement_source=None):
         self._llm = llm

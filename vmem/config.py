@@ -21,7 +21,7 @@ DEFAULTS = {
     "db_path": str(_HOME / ".claude" / "memory" / "vmem.db"),
     "mcp_servers_dir": str(_HOME / ".claude" / "mcp-servers"),
     "hooks_dir": str(_HOME / ".claude" / "hooks"),
-    "model_path": str(_HOME / "bge-small-zh-v1.5"),
+    "model_path": "BAAI/bge-small-zh-v1.5",  # HuggingFace 自动下载
 }
 
 # ---------------------------------------------------------------------------

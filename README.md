@@ -25,8 +25,8 @@
                  ▼
 ┌─────────────────────────────────────────────┐
 │  Layer 2: LLM 语境判断                       │
-│  DeepSeek-V4-Flash 并发语境分析              │
-│  (ContextJudge — 减少误报，宁可漏报不可错杀) │
+│  DeepSeek 并发语境分析 + 多维度置信度        │
+│  (ContextJudge — 分层 prompt，宁可漏报不可错杀)│
 └────────────────┬────────────────────────────┘
                  │ 确认违规词
                  ▼
@@ -36,9 +36,9 @@
 │  50 条 + 行业规则 7 个行业                   │
 │  向量 0.5 + 全文 0.2 + 时间 0.1 + 置信度 0.2 │
 └────────────────┬────────────────────────────┘
-                 │ 法规依据 + 替代建议
+                 │ 法规依据 + 处罚案例 + 替代建议
                  ▼
-        输出审查报告（高亮 + 法条 + 建议）
+        输出审查报告（高亮 + 法条 + 案例 + 建议）
 ```
 
 ---
@@ -48,12 +48,13 @@
 | 能力 | 说明 |
 |------|------|
 | **禁用词匹配** | 288 条禁用词正则引擎，毫秒级响应，覆盖极限用语/虚假宣传/对比贬低等 8 大类 |
-| **LLM 语境判断** | DeepSeek 智能分析，区分营销违规 vs 客观参数，减少误报 |
+| **LLM 语境判断** | 分层 prompt 架构（按违规类型专用 prompt），多维度置信度输出 |
 | **三层知识库** | 法规条文 110 条 + 处罚案例 50 条 + 行业规则 7 个行业，vmem 融合搜索 |
+| **处罚案例关联** | 从 RAG 结果中自动提取相关处罚案例（标题、罚款金额、法条依据） |
 | **替代文案生成** | 70 条禁用→替代映射表 + LLM 智能改写，给出合规替代建议 |
-| **反馈记忆** | 用户确认/修改/驳回 → SQLite 持久化，越用越准的数据飞轮 |
-| **异步审查** | 请求队列 + 并发控制（最大 5 并发）+ SSE 实时进度推送 |
-| **性能监控** | P50/P95/P99 延迟统计、吞吐量、错误率实时监控 |
+| **反馈记忆** | 用户确认/修改/驳回 → SQLite 持久化 → 贝叶斯置信度更新 |
+| **异步审查** | RequestQueue 并发控制（最大 5 并发）+ SSE 实时进度推送 |
+| **性能监控** | P50/P95/P99 延迟百分位 + 吞吐量 + 错误率实时监控 |
 | **用户系统** | 注册/登录/Token 鉴权/密码重置/账户注销 |
 | **套餐计费** | 免费版/专业版/企业版，用量限制 + 升级 + 模拟支付 |
 | **批量审查** | 上传 txt/csv 文件，逐行审查，最多 100 条/批 |
@@ -77,26 +78,18 @@
 | **人工对比** | 人工预估 60 分钟，Agent 快 100 倍 |
 
 > **零误报**（FP=0）：Agent 标记为违规的内容，100% 确实违规。
-> 评测集包含极限用语、虚假宣传、对比贬低、行业禁区等违规样本，以及正常产品描述、事实参数、边界案例等非违规样本。
 
 ### RAG 检索质量评测（15 题）
-
-覆盖法规查询、处罚案例检索、行业规则检索三类场景：
 
 | 指标 | 数值 |
 |------|------|
 | **检索召回率** | **86.7%** |
 | 命中 / 总数 | 13 / 15 |
 
-> 15 题覆盖：全网最低价、国家级用语、食品功效宣传、未成年人代言、虚假广告认定、化妆品违规、电商平台处罚、保健食品处罚、直播间虚假宣传、教育培训处罚、抖音审核规则、小红书种草标注、化妆品对比效果图、金融理财合规、房地产广告规范。
-
 ### 评测脚本
 
 ```bash
-# 运行完整评测（需配置 DEEPSEEK_API_KEY）
 python evaluation/run_eval.py
-
-# 运行端到端测试
 python evaluation/test_e2e.py
 ```
 
@@ -106,7 +99,7 @@ python evaluation/test_e2e.py
 
 ### 1. 三层架构，不是套壳 ChatGPT
 
-规则引擎做第一道筛选（零 LLM 成本），LLM 做语境判断（减少误报），RAG 做法规检索（给出法条依据）。每一层都有明确职责，不是简单把文案扔给大模型。
+规则引擎做第一道筛选（零 LLM 成本），LLM 做语境判断（减少误报），RAG 做法规检索（给出法条依据）。每一层都有明确职责。
 
 ### 2. vmem 融合检索
 
@@ -126,9 +119,13 @@ python evaluation/test_e2e.py
 
 ### 5. LLM 兼容层（CompatibleLLM）
 
-自研 LLM 包装器，兼容推理模型（如 mimo 等），解决 `reasoning_content` 与 `content` 的差异问题，统一 `ainvoke` 接口。
+自研 LLM 包装器，兼容推理模型（如 mimo 等），解决 `reasoning_content` 与 `content` 的差异问题，统一 `ainvoke` 接口。Token 用量全链路追踪。
 
-### 6. 异步审查 + 并发控制
+### 6. 分层语境判断（ContextJudge v2）
+
+按违规类型（极限用语/虚假宣传/对比贬低/行业禁区）使用专用 prompt，多维度置信度输出（overall / violation_type / severity / context_relevance），结构化推理（evidence + mitigating_factors）。
+
+### 7. 异步审查 + 并发控制
 
 - `RequestQueue`：Semaphore 并发控制（最大 5 并发），队列最大 100 请求
 - `PerformanceMonitor`：P50/P95/P99 延迟百分位 + 吞吐量 + 错误率
@@ -152,14 +149,13 @@ python evaluation/test_e2e.py
 | 层 | 选择 |
 |---|------|
 | Agent 框架 | Function Calling + 自研 CompatibleLLM 兼容层 |
-| LLM | DeepSeek-V4-Flash（支持推理模型 mimo 等） |
+| LLM | DeepSeek-V4-Flash（兼容推理模型 mimo 等） |
 | 知识库 | vmem (SQLite + FTS5 + numpy + bge-small-zh-v1.5) |
-| 后端 | FastAPI + 异步队列 + 并发控制 |
+| 后端 | FastAPI + 异步队列 + 并发控制 + SSE |
 | 前端 | Next.js + shadcn/ui + Tailwind CSS |
 | 数据模型 | Pydantic v2 |
-| 存储 | SQLite (review.db + vmem.db) |
 | 用户认证 | bcrypt + Token 鉴权 |
-| 实时推送 | SSE (Server-Sent Events) |
+| 存储 | SQLite (review.db + vmem.db) |
 
 ---
 
@@ -174,24 +170,16 @@ python evaluation/test_e2e.py
 ### 安装依赖
 
 ```bash
-# 后端依赖
 pip install -r requirements-backend.txt
-
-# 数据管线依赖（首次需要，用于构建知识库）
 pip install -r requirements-data.txt
-
-# 前端依赖
 cd frontend && npm install
 ```
 
 ### 配置
 
 ```bash
-# 复制环境变量模板
 cp .env.example .env
-
-# 编辑 .env，填入你的 DeepSeek API Key
-# DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
+# 编辑 .env，填入 DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxx
 ```
 
 ### 启动
@@ -201,17 +189,13 @@ cp .env.example .env
 start_all.bat
 
 # 方式二：分别启动
-# 终端 1 — 后端 (http://localhost:8000)
-python -m uvicorn backend.main:app --reload --port 8000
-
-# 终端 2 — 前端 (http://localhost:3000)
-cd frontend && npm run dev
+python -m uvicorn backend.main:app --reload --port 8000   # 后端
+cd frontend && npm run dev                                  # 前端
 ```
 
 ### 构建知识库（首次）
 
 ```bash
-# 解析法规/案例/禁用词数据 → vmem 数据库
 python pipeline/run_pipeline.py
 ```
 
@@ -221,136 +205,90 @@ python pipeline/run_pipeline.py
 
 ```
 ├── backend/                    # FastAPI 后端
-│   ├── main.py                 # FastAPI 应用入口（25 个 API 端点）
+│   ├── main.py                 # 25 个 API 端点（用户+审查+计费+异步+监控）
 │   ├── agent.py                # ComplianceAgent 主编排
 │   ├── schemas.py              # Pydantic 数据模型（含异步/性能/计费模型）
 │   ├── config.py               # 配置加载（.env）
 │   ├── store.py                # 用户/审查/计费/反馈存储 (SQLite)
-│   ├── llm_compat.py           # LLM 兼容层（支持推理模型）
+│   ├── llm_compat.py           # CompatibleLLM 兼容层
 │   └── tools/                  # Agent 工具集
 │       ├── banned_word.py      # 工具1: 禁用词规则匹配
-│       ├── context_judge.py    # 工具2: LLM 语境判断
+│       ├── context_judge.py    # 工具2: LLM 语境判断 v2（分层 prompt）
 │       ├── regulation_rag.py   # 工具3: 法规 RAG 检索
 │       └── rewrite.py          # 工具4: 替代文案生成
 │
 ├── pipeline/                   # 数据管线 + 知识库构建
-│   ├── parsers.py              # 法规/案例/禁用词解析器
-│   ├── retrieval.py            # ThreeLibRetriever 三库并行检索
-│   ├── storage.py              # VmemStore 封装
-│   ├── run_pipeline.py         # 一键构建知识库
-│   └── data/                   # 知识库数据
-│       ├── vmem.db             # vmem 向量数据库
-│       ├── review.db           # 审查记录数据库
-│       ├── 禁用词/             # 原始禁用词 JSON
-│       └── parsed/             # 解析后的结构化数据
-│           ├── ad_law.json     # 广告法条文 (110 条)
-│           ├── penalty_cases.json  # 处罚案例 (50 条)
-│           ├── industry_rules.json # 行业规则 (7 个行业)
-│           ├── banned_words.json   # 禁用词库 (288 条)
-│           └── replacement.json    # 替代映射 (70 条)
+│   ├── parsers.py / retrieval.py / storage.py / run_pipeline.py
+│   └── data/                   # 知识库数据 (vmem.db, review.db, 禁用词/)
 │
 ├── frontend/                   # Next.js 前端
-│   ├── src/app/                # 页面
-│   │   ├── page.tsx            # 首页
-│   │   ├── review/page.tsx     # 审查工作台
-│   │   ├── history/page.tsx    # 审查历史
-│   │   ├── stats/page.tsx      # 数据统计
-│   │   ├── (auth)/             # 认证页面
-│   │   │   ├── login/          # 登录
-│   │   │   ├── register/       # 注册
-│   │   │   └── forgot-password/ # 找回密码
-│   │   ├── pricing/page.tsx    # 套餐定价
-│   │   ├── settings/page.tsx   # 个人设置
-│   │   └── usage/page.tsx      # 用量统计
-│   ├── src/components/         # 组件
-│   │   ├── ui/                 # shadcn/ui 基础组件
-│   │   ├── nav-bar.tsx         # 导航栏
-│   │   ├── batch-upload.tsx    # 批量上传
-│   │   └── batch-result-list.tsx # 批量结果
-│   ├── src/lib/
-│   │   ├── api.ts              # API 客户端
-│   │   ├── auth.tsx            # 认证上下文
-│   │   └── export.ts           # 导出工具
-│   ├── src/hooks/
-│   │   └── use-scroll-reveal.ts
-│   └── src/types/review.ts     # TypeScript 类型定义
+│   └── src/
+│       ├── app/                # 页面 (首页/审查/历史/统计/定价/设置/登录/注册)
+│       ├── components/         # 组件 (ui/ 导航栏/批量上传)
+│       ├── lib/                # API 客户端/认证/导出
+│       └── hooks/              # 自定义 hooks
 │
 ├── vmem/                       # 记忆向量存储系统
-│   ├── store.py                # MemoryVectorStore 核心实现
-│   ├── backfill.py             # 数据回填工具
-│   └── migrations.py           # 数据库迁移
-│
 ├── evaluation/                 # 评测集 + 评测脚本
-│   ├── agent_eval_cases.json   # Agent 评测集 (30 题)
-│   ├── rag_eval_cases.json     # RAG 评测集 (15 题)
-│   ├── eval_report.json        # 评测报告
-│   ├── run_eval.py             # 评测脚本
-│   └── test_e2e.py             # 端到端测试
-│
 ├── 数据集/                      # 原始法规/案例/禁用词数据
-│
-├── .env.example                # 环境变量模板
-├── requirements-backend.txt    # 后端 Python 依赖
-├── requirements-data.txt       # 数据管线 Python 依赖
-├── start_all.bat               # Windows 一键启动
-├── start_backend.bat           # 后端启动脚本
-└── start_frontend.bat          # 前端启动脚本
+├── .env.example / requirements-backend.txt / requirements-data.txt
+└── start_all.bat / start_backend.bat / start_frontend.bat
 ```
 
 ---
 
-## API 接口
+## API 接口（25 个端点）
 
-### 认证相关
+### 认证（6 个）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `POST` | `/api/auth/register` | 用户注册 |
 | `POST` | `/api/auth/login` | 用户登录 |
-| `GET` | `/api/me` | 获取当前用户信息 |
+| `GET` | `/api/me` | 当前用户信息 |
 | `POST` | `/api/auth/forgot-password` | 找回密码 |
 | `POST` | `/api/auth/reset-password` | 重置密码 |
 | `DELETE` | `/api/account` | 注销账户 |
 
-### 审查相关
+### 审查（5 个）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `POST` | `/api/review` | 同步审查（支持可选鉴权） |
-| `POST` | `/api/review/async` | 异步审查（返回 request_id） |
+| `POST` | `/api/review/async` | 异步审查 |
 | `GET` | `/api/review/{request_id}` | 查询异步审查状态 |
-| `GET` | `/api/review/{request_id}/stream` | SSE 实时进度推送 |
-| `POST` | `/api/batch-review` | 批量审查（上传 txt/csv） |
+| `GET` | `/api/review/{request_id}/stream` | SSE 实时进度 |
+| `POST` | `/api/batch-review` | 批量审查（txt/csv） |
 
-### 反馈与统计
+### 反馈 & 统计（6 个）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `POST` | `/api/feedback` | 提交审查反馈（需登录） |
-| `GET` | `/api/feedback/stats` | 反馈统计数据 |
-| `GET` | `/api/stats` | 审查统计数据 |
-| `GET` | `/api/reviews` | 审查历史列表（分页） |
-| `GET` | `/api/reviews/{review_id}` | 单条审查详情 |
+| `POST` | `/api/feedback` | 提交反馈（需登录） |
+| `GET` | `/api/feedback/stats` | 反馈统计 |
+| `GET` | `/api/stats` | 审查统计 |
+| `GET` | `/api/reviews` | 审查历史（分页） |
+| `GET` | `/api/reviews/{review_id}` | 单条详情 |
 | `GET` | `/api/my-reviews` | 我的审查历史 |
 
-### 计费与用量
+### 计费（5 个）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `GET` | `/api/plans` | 获取套餐列表 |
-| `GET` | `/api/my-plan` | 获取当前套餐 |
-| `GET` | `/api/usage` | 获取用量统计 |
+| `GET` | `/api/plans` | 套餐列表 |
+| `GET` | `/api/my-plan` | 当前套餐 |
+| `GET` | `/api/usage` | 用量统计 |
 | `POST` | `/api/upgrade` | 升级套餐 |
-| `POST` | `/api/simulate-payment` | 模拟支付（Hackathon 阶段） |
+| `POST` | `/api/simulate-payment` | 模拟支付 |
 
-### 系统
+### 系统（3 个）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | `GET` | `/api/health` | 健康检查 |
-| `GET` | `/api/metrics` | 性能监控指标（P50/P95/P99） |
+| `GET` | `/api/metrics` | 性能指标 |
 | `GET` | `/api/queue/status` | 队列状态 |
-| `POST` | `/api/test-connection` | 测试 LLM API 连接 |
+| `POST` | `/api/test-connection` | 测试 LLM 连接 |
 
 ### 审查请求示例
 
@@ -377,9 +315,10 @@ POST /api/review
       "severity": "high",
       "confidence": 0.95,
       "law_article": "《广告法》第九条第三项",
+      "law_content": "第五十七条 有下列行为之一的...",
       "explanation": "使用绝对化用语「最低」构成违规",
       "suggestions": [{"original": "最低", "replacement": "优惠", "reason": "从合规映射表匹配"}],
-      "related_cases": [{"title": "某电商平台最低价处罚案", "penalty": "罚款 20 万元", "article": "..."}]
+      "related_cases": [{"title": "某电商平台最低价处罚案", "penalty": "罚款 20 万元"}]
     }
   ],
   "summary": "检测到 2 处违规，最高风险等级：high",
@@ -398,28 +337,24 @@ POST /api/review
 
 ## 更新日志
 
-### v2.0 — 2026-06-21（合并版）
+### v2.0 — 2026-06-21
 
 合并两个开发分支的优势功能：
 
-**新增功能**
-- 🔌 **LLM 兼容层** (`llm_compat.py`)：自研 CompatibleLLM，兼容推理模型（mimo 等），统一 `ainvoke` 接口
-- ⚡ **异步审查管线**：RequestQueue 并发控制（最大 5 并发）+ SSE 实时进度推送
-- 📊 **性能监控**：P50/P95/P99 延迟百分位 + 吞吐量 + 错误率中间件
-- 👤 **用户系统**：注册/登录/Token 鉴权/密码重置/账户注销
-- 💰 **套餐计费**：免费版/专业版/企业版，用量限制 + 升级 + 模拟支付
-- 📦 **批量审查**：上传 txt/csv 文件，逐行审查，最多 100 条/批
-- 📈 **反馈统计**：`/api/feedback/stats` + 异步置信度学习闭环
-- 🏛️ **处罚案例关联**：从 RAG 结果中自动提取相关处罚案例
+**新增**
+- `llm_compat.py`：CompatibleLLM 兼容推理模型，token 用量全链路追踪
+- ContextJudge v2：分层 prompt + 多维度置信度 + 结构化推理
+- 异步审查管线：RequestQueue + PerformanceMonitor + SSE 推送
+- 用户系统：注册/登录/鉴权/密码重置/注销
+- 套餐计费：免费版/专业版/企业版 + 用量限制
+- 批量审查：txt/csv 文件上传，最多 100 条/批
+- 反馈统计 + 异步置信度学习闭环
+- 前端：登录/注册/定价/设置/批量上传页面
+- 处罚案例自动关联（从 RAG 结果提取）
 
-**改进**
-- ContextJudgment 扩展为多维置信度（violation_type / severity / context_relevance）
-- token 用量全链路追踪（prompt + completion tokens 累计）
-- 前端新增：登录/注册/定价/设置/批量上传页面
-- 修复 SSR hydration 不匹配问题
-- 修复法条依据字段映射（camelCase 转换兼容）
-
-**API 端点**：从 4 个扩展至 25 个
+**修复**
+- SSR hydration 不匹配（SettingsPanel localStorage 读取时机）
+- 法条依据字段映射（camelCase 转换兼容）
 
 ---
 

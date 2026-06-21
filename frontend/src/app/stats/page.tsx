@@ -9,7 +9,8 @@ import {
   CardDescription,
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { getStats } from "@/lib/api"
+import { Button } from "@/components/ui/button"
+import { getStats, getUsage } from "@/lib/api"
 import type { StatsResponse, Severity } from "@/types/review"
 import {
   BarChart3,
@@ -18,7 +19,10 @@ import {
   Loader2,
   AlertCircle,
   TrendingUp,
+  Zap,
+  ChevronRight,
 } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 // ---------------------------------------------------------------------------
 // Risk label helper
@@ -132,7 +136,7 @@ function CategoryBarChart({
             </div>
             <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
               <div
-                className="h-full rounded-full bg-primary transition-all duration-500"
+                className="h-full rounded-full bg-[#0066ff] transition-all duration-500"
                 style={{ width: `${Math.max(pct, 2)}%` }}
               />
             </div>
@@ -216,19 +220,21 @@ function RecentReviewsTable({
 type PageState = "loading" | "error" | "ready"
 
 export default function StatsPage() {
+  const router = useRouter()
   const [state, setState] = useState<PageState>("loading")
   const [data, setData] = useState<StatsResponse | null>(null)
+  const [usageData, setUsageData] = useState<any>(null)
 
   useEffect(() => {
     let cancelled = false
 
     ;(async () => {
       try {
-        const res = await getStats()
-        if (!cancelled) {
-          setData(res)
-          setState("ready")
-        }
+        const [stats, usage] = await Promise.allSettled([getStats(), getUsage()])
+        if (cancelled) return
+        if (stats.status === "fulfilled") setData(stats.value)
+        if (usage.status === "fulfilled" && usage.value.success) setUsageData(usage.value)
+        setState("ready")
       } catch {
         if (!cancelled) setState("error")
       }
@@ -242,7 +248,7 @@ export default function StatsPage() {
   // ---- Loading ----
   if (state === "loading") {
     return (
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background pt-20">
         <div className="mx-auto max-w-5xl px-4 py-16 flex flex-col items-center justify-center gap-4">
           <Loader2 className="size-8 animate-spin text-muted-foreground" />
           <p className="text-sm text-muted-foreground">正在加载统计数据...</p>
@@ -254,7 +260,7 @@ export default function StatsPage() {
   // ---- Error (backend not running) ----
   if (state === "error" || !data) {
     return (
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background pt-20">
         <div className="mx-auto max-w-5xl px-4 py-16 flex flex-col items-center justify-center gap-4">
           <div className="rounded-full bg-muted p-4">
             <AlertCircle className="size-8 text-destructive" />
@@ -263,7 +269,7 @@ export default function StatsPage() {
           <p className="text-sm text-muted-foreground text-center max-w-md">
             无法连接到后端 API 服务。请确保后端已启动并运行在{" "}
             <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-              {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}
+              {process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}
             </code>
             ，然后刷新页面重试。
           </p>
@@ -276,12 +282,12 @@ export default function StatsPage() {
 
   // ---- Ready ----
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-background pt-20">
+      <div className="mx-auto max-w-5xl px-4 pt-24 pb-8 sm:px-6 lg:px-8">
         {/* Header */}
         <header className="mb-8">
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <BarChart3 className="size-6 text-primary" />
+          <h1 className="text-[22px] font-bold tracking-tight text-[#0a0a0a] flex items-center gap-2">
+            <BarChart3 className="size-6 text-[#0066ff]" />
             数据看板
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -292,7 +298,7 @@ export default function StatsPage() {
         {/* KPI Cards */}
         <div className="grid gap-4 sm:grid-cols-3 mb-8">
           <StatCard
-            icon={<FileSearch className="size-6 text-primary" />}
+            icon={<FileSearch className="size-6 text-[#0066ff]" />}
             label="总审查数"
             value={data.totalReviews}
           />
@@ -309,11 +315,41 @@ export default function StatsPage() {
           />
         </div>
 
+        {/* Usage Summary */}
+        {usageData && (
+          <Card className="mb-8 border-[#0066ff]/10">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Zap className="size-4 text-[#0066ff]" />
+                  套餐用量
+                </CardTitle>
+                <CardDescription>
+                  当前套餐：{usageData.plan?.name || "免费版"} · 今日已用 {usageData.today?.reviews ?? 0} 次
+                </CardDescription>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => router.push("/usage")}>
+                详情 <ChevronRight className="size-3" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>本月累计：</span>
+                <span className="font-medium text-foreground">{usageData.thisMonth?.reviews ?? 0} 次审查</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="font-medium text-foreground">{usageData.thisMonth?.batches ?? 0} 次批量</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="font-medium text-foreground">{(usageData.thisMonth?.tokens ?? 0).toLocaleString()} tokens</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Violation by Category */}
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="size-5 text-primary" />
+              <BarChart3 className="size-5 text-[#0066ff]" />
               违规类型分布
             </CardTitle>
             <CardDescription>

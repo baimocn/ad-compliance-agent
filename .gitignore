@@ -15,3 +15,7 @@ Thumbs.db
 evaluation/eval_report.json
 *.db-shm
 *.db-wal
+*.pdf
+
+# Python venv
+.venv/

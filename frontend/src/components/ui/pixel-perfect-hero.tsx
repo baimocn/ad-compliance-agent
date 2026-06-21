@@ -24,6 +24,7 @@ export function PixelHero({
   secondaryCta,
   secondaryCtaMobile,
   onPrimaryClick,
+  onSecondaryClick,
   githubUrl,
 }: PixelHeroProps) {
   return (
@@ -97,16 +98,14 @@ export function PixelHero({
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </button>
 
-          <a
-            href={githubUrl ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-8 py-4 text-base font-semibold text-slate-300 transition-all hover:bg-slate-800 hover:text-white hover:border-slate-600"
+          <button
+            onClick={onSecondaryClick ?? (() => window.open(githubUrl, "_blank"))}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-8 py-4 text-base font-semibold text-slate-300 transition-all hover:bg-slate-800 hover:text-white hover:border-slate-600 cursor-pointer"
           >
             <ExternalLink className="w-5 h-5" />
             <span className="hidden sm:inline">{secondaryCta}</span>
             <span className="sm:hidden">{secondaryCtaMobile}</span>
-          </a>
+          </button>
         </div>
 
         {/* Feature highlights */}

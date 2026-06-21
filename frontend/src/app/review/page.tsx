@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
 } from "@/components/ui/card"
@@ -14,12 +15,11 @@ import {
   ShieldCheck, Loader2, Copy, Check, X, AlertTriangle,
   FileCheck, RotateCcw, Settings, Eye, EyeOff,
   ChevronDown, ChevronRight, Zap, Brain, BookOpen, Wand2,
-  CircleCheck, CircleDot, ArrowRight,
+  CircleCheck, CircleDot, ArrowRight, Upload, Download,
 } from "lucide-react"
-import {
-  submitReview, submitFeedback,
-  submitAsyncReview, streamReviewProgress,
-} from "@/lib/api"
+import { submitReview, submitFeedback } from "@/lib/api"
+import { BatchUpload } from "@/components/batch-upload"
+import { BatchResultList } from "@/components/batch-result-list"
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -34,6 +34,12 @@ interface PipelineStep {
   icon: string
 }
 
+interface RelatedCase {
+  title: string
+  penalty: string
+  article: string
+}
+
 interface Violation {
   id: string
   word: string
@@ -44,15 +50,17 @@ interface Violation {
   confidence: number
   severity: RiskLevel
   suggestion: string
-  relatedCases: string[]
+  relatedCases: RelatedCase[]
 }
 
 interface ReviewResult {
+  reviewId: string
   riskLevel: RiskLevel
   violations: Violation[]
   highlightedText: string
   pipelineSteps: PipelineStep[]
   processingTimeMs: number
+  tokenUsage?: Record<string, number>
 }
 
 // ── Constants ────────────────────────────────────────────────
@@ -166,6 +174,33 @@ function sanitizeHtml(html: string): string {
     m.replace(/</g, '&lt;').replace(/>/g, '&gt;'))
 }
 
+function exportSingleReview(result: ReviewResult) {
+  const BOM = "\uFEFF"
+  const now = new Date().toISOString()
+  const rows = [
+    ["审查ID", "整体风险", "违规数", "审查时间", "处理时间(ms)", "Token用量"].join(","),
+    [
+      result.reviewId,
+      result.riskLevel,
+      result.violations.length,
+      now,
+      result.processingTimeMs,
+      result.tokenUsage?.totalTokens ?? result.tokenUsage?.total_tokens ?? 0,
+    ].join(","),
+    "",
+    "违规ID,违规词,类别,风险等级,置信度,法规条文,修改建议",
+    ...result.violations.map(v => [
+      v.id, `"${v.word}"`, v.type, v.severity, v.confidence,
+      `"${v.law}"`, v.suggestion ?? "",
+    ].join(",")),
+  ]
+  const blob = new Blob([BOM + rows.join("\n")], { type: "text/csv;charset=utf-8;header=present" })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement("a")
+  a.href = url; a.download = `审查结果_${result.reviewId}.csv`
+  a.click(); URL.revokeObjectURL(url)
+}
+
 // ── Expandable Section ───────────────────────────────────────
 
 function ExpandableSection({
@@ -189,7 +224,7 @@ function ExpandableSection({
 
 // ── Violation Card (redesigned) ──────────────────────────────
 
-function ViolationCard({ violation }: { violation: Violation }) {
+function ViolationCard({ violation, reviewId }: { violation: Violation; reviewId: string }) {
   const [copied, setCopied] = useState(false)
   const [feedback, setFeedback] = useState<"none" | "confirm" | "modify" | "dismiss">("none")
   const riskCfg = RISK_CONFIG[violation.severity]
@@ -203,9 +238,9 @@ function ViolationCard({ violation }: { violation: Violation }) {
   const handleFeedback = useCallback(async (action: "confirm" | "modify" | "dismiss") => {
     setFeedback(action)
     try {
-      await submitFeedback({ reviewId: "", violationId: violation.id, action })
+      await submitFeedback({ reviewId, violationId: violation.id, action })
     } catch { /* silent */ }
-  }, [violation.id])
+  }, [violation.id, reviewId])
 
   const isDismissed = feedback === "dismiss"
 
@@ -248,17 +283,50 @@ function ViolationCard({ violation }: { violation: Violation }) {
           </p>
         </ExpandableSection>
 
-        {/* Suggestion */}
-        <div className="flex flex-wrap items-center gap-2 rounded-md bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 p-2.5">
-          <Wand2 className="size-3.5 text-emerald-600 shrink-0" />
-          <span className="text-sm flex-1">
-            <span className="text-xs text-muted-foreground">替代建议：</span>
-            <span className="font-medium text-emerald-800 dark:text-emerald-300">{violation.suggestion}</span>
-          </span>
-          <Button variant="ghost" size="icon" className="size-7" onClick={handleCopy}>
-            {copied ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
-          </Button>
+        {/* Suggestion — 原稿 vs 改写稿对比 */}
+        <div className="rounded-lg border border-emerald-200/50 overflow-hidden">
+          <div className="flex items-center gap-2 bg-emerald-50/80 px-3 py-1.5 border-b border-emerald-200/50">
+            <Wand2 className="size-3.5 text-emerald-600" />
+            <span className="text-xs font-medium text-emerald-700">替代建议 · 原稿 vs 改写稿</span>
+          </div>
+          <div className="grid grid-cols-2 divide-x divide-emerald-200/50">
+            <div className="p-2.5 space-y-1">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">原稿</p>
+              <p className="text-sm bg-red-50 rounded px-2 py-1 text-red-800 line-through decoration-red-400">
+                {violation.word}
+              </p>
+            </div>
+            <div className="p-2.5 space-y-1">
+              <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">改写稿</p>
+              <p className="text-sm bg-emerald-50 rounded px-2 py-1 text-emerald-800 font-medium">
+                {violation.suggestion}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end px-2.5 pb-2">
+            <Button variant="ghost" size="icon" className="size-7" onClick={handleCopy}>
+              {copied ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
+            </Button>
+          </div>
         </div>
+
+        {/* Related cases */}
+        {violation.relatedCases.length > 0 && (
+          <ExpandableSection
+            icon={<BookOpen className="size-3" />}
+            title={`相关判例（${violation.relatedCases.length} 例）`}
+            defaultOpen={false}>
+            <div className="space-y-2 mt-1">
+              {violation.relatedCases.map((c, i) => (
+                <div key={i} className="rounded border bg-background/50 p-2 text-xs space-y-0.5">
+                  <p className="font-medium">{c.title}</p>
+                  <p className="text-muted-foreground">处罚：{c.penalty}</p>
+                  {c.article && <p className="text-muted-foreground">依据：{c.article}</p>}
+                </div>
+              ))}
+            </div>
+          </ExpandableSection>
+        )}
 
         {/* Feedback buttons */}
         <div className="flex flex-wrap gap-2 pt-1 border-t">
@@ -289,25 +357,21 @@ function ViolationCard({ violation }: { violation: Violation }) {
 // ── Settings Panel ───────────────────────────────────────────
 
 function SettingsPanel() {
-  const [apiKey, setApiKey] = useState("")
-  const [baseUrl, setBaseUrl] = useState("https://api.deepseek.com")
+  const [apiKey, setApiKey] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("ad_agent_api_key") || "" : "")
+  const [baseUrl, setBaseUrl] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("ad_agent_base_url") || "https://api.deepseek.com" : "https://api.deepseek.com")
+  const [model, setModel] = useState(
+    typeof window !== "undefined" ? localStorage.getItem("ad_agent_model") || "deepseek-chat" : "deepseek-chat")
   const [showKey, setShowKey] = useState(false)
   const [open, setOpen] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [hasKey, setHasKey] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem("ad_agent_api_key") || ""
-    const storedUrl = localStorage.getItem("ad_agent_base_url") || "https://api.deepseek.com"
-    setApiKey(stored)
-    setBaseUrl(storedUrl)
-    setHasKey(!!stored)
-  }, [])
+  const hasKey = typeof window !== "undefined" && !!localStorage.getItem("ad_agent_api_key")
 
   const handleSave = () => {
     localStorage.setItem("ad_agent_api_key", apiKey)
     localStorage.setItem("ad_agent_base_url", baseUrl)
-    setHasKey(!!apiKey)
+    localStorage.setItem("ad_agent_model", model)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -320,7 +384,7 @@ function SettingsPanel() {
           <span>API 配置</span>
           <span className={`size-2 rounded-full ${hasKey ? "bg-green-500" : "bg-amber-500"}`} />
         </div>
-        <span className="text-xs text-muted-foreground">{hasKey ? "已配置" : "未配置 DeepSeek API Key"}</span>
+        <span className="text-xs text-muted-foreground">{hasKey ? "已配置" : "未配置 API Key"}</span>
       </button>
       {open && (
         <CardContent className="pt-0 space-y-3">
@@ -339,6 +403,12 @@ function SettingsPanel() {
             <label className="text-xs font-medium">Base URL</label>
             <input type="text" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)}
               placeholder="https://api.deepseek.com" className="w-full rounded-md border bg-background px-3 py-1.5 text-sm" />
+            <p className="text-xs text-muted-foreground">支持任何 OpenAI 兼容接口的 Base URL</p>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">模型名称</label>
+            <input type="text" value={model} onChange={(e) => setModel(e.target.value)}
+              placeholder="deepseek-chat" className="w-full rounded-md border bg-background px-3 py-1.5 text-sm" />
           </div>
           <Button size="sm" onClick={handleSave} className="w-full">
             {saved ? <><Check className="size-3" /> 已保存</> : "保存配置"}
@@ -352,36 +422,17 @@ function SettingsPanel() {
 
 // ── Input Panel ──────────────────────────────────────────────
 
-function InputPanel({ disabled, useAsync, onToggleAsync, onSubmit }: {
-  disabled: boolean; useAsync: boolean; onToggleAsync: () => void;
-  onSubmit: (text: string, industry: string) => void;
-}) {
+function InputPanel({ disabled, onSubmit }: { disabled: boolean; onSubmit: (text: string, industry: string) => void }) {
   const [text, setText] = useState("")
   const [industry, setIndustry] = useState("")
 
   return (
     <Card className={disabled ? "opacity-60" : ""}>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <ShieldCheck className="size-5 text-primary" /> 广告合规审查
-          </CardTitle>
-          <button
-            onClick={onToggleAsync}
-            disabled={disabled}
-            className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-              useAsync
-                ? "bg-blue-100 text-blue-700 border-blue-300"
-                : "bg-gray-100 text-gray-600 border-gray-200"
-            } disabled:opacity-50`}>
-            {useAsync ? "⚡ 异步模式" : "🔄 同步模式"}
-          </button>
-        </div>
-        <CardDescription>
-          {useAsync
-            ? "异步审查：支持高并发，实时进度推送（SSE）。"
-            : "同步审查：阻塞等待结果，适合单用户使用。"}
-        </CardDescription>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldCheck className="size-5 text-primary" /> 广告合规审查
+        </CardTitle>
+        <CardDescription>输入待审查文案，Agent 将自动执行四步审查管线。</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -418,108 +469,21 @@ function InputPanel({ disabled, useAsync, onToggleAsync, onSubmit }: {
   )
 }
 
-// ── SSE 实时进度 Hook ────────────────────────────────────────
-
-function useAsyncReview() {
-  const [requestId, setRequestId] = useState<string | null>(null)
-  const [progress, setProgress] = useState(0)
-  const [currentStep, setCurrentStep] = useState("")
-  const [queuePosition, setQueuePosition] = useState(0)
-  const stopRef = useRef<(() => void) | null>(null)
-
-  const start = useCallback(async (text: string, industry: string) => {
-    try {
-      const resp = await submitAsyncReview({ text, industry })
-      setRequestId(resp.requestId)
-      setQueuePosition(resp.position)
-      setProgress(0)
-
-      const stop = streamReviewProgress(
-        resp.requestId,
-        (data) => {
-          setProgress(data.progress)
-          setCurrentStep(data.currentStep)
-          setQueuePosition(data.positionInQueue)
-        },
-        (result) => {
-          setProgress(1)
-          setCurrentStep("审查完成")
-        },
-        (error) => {
-          setCurrentStep(`错误: ${error}`)
-        },
-      )
-      stopRef.current = stop
-      return resp.requestId
-    } catch (err: any) {
-      throw new Error(err.message || "提交失败")
-    }
-  }, [])
-
-  const stop = useCallback(() => {
-    if (stopRef.current) {
-      stopRef.current()
-      stopRef.current = null
-    }
-  }, [])
-
-  return { requestId, progress, currentStep, queuePosition, start, stop }
-}
-
-// ── 实时进度条组件 ───────────────────────────────────────────
-
-function LiveProgressBar({ progress, currentStep, queuePosition }: {
-  progress: number; currentStep: string; queuePosition: number;
-}) {
-  const pct = Math.round(progress * 100)
-  return (
-    <Card className="border-2 border-blue-500/20 bg-gradient-to-br from-blue-50/50 to-purple-50/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Loader2 className="size-5 text-blue-600 animate-spin" />
-          实时审查进度
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 pt-0">
-        {/* Progress bar */}
-        <div className="relative h-3 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full transition-all duration-300"
-            style={{ width: `${pct}%` }}
-          />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-xs font-bold text-white drop-shadow">{pct}%</span>
-          </div>
-        </div>
-
-        {/* Current step */}
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">当前步骤</span>
-          <span className="font-medium text-blue-700">{currentStep || "初始化..."}</span>
-        </div>
-
-        {/* Queue position (if queued) */}
-        {queuePosition > 0 && progress === 0 && (
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">队列位置</span>
-            <Badge variant="outline" className="text-xs">第 {queuePosition} 位</Badge>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 // ── Main Page ────────────────────────────────────────────────
 
 export default function ReviewPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [showOnboarding, setShowOnboarding] = useState(searchParams.get("onboarding") === "true")
+  const [mode, setMode] = useState<"single" | "batch">("single")
   const [loading, setLoading] = useState(false)
-  const [useAsync, setUseAsync] = useState(false)
   const [result, setResult] = useState<ReviewResult | null>(null)
   const [animSteps, setAnimSteps] = useState<PipelineStep[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [needsUpgrade, setNeedsUpgrade] = useState(false)
+  const [batchResults, setBatchResults] = useState<any[] | null>(null)
+  const [batchSummary, setBatchSummary] = useState<any>(null)
   const timerRef = useRef<NodeJS.Timeout[]>([])
-  const asyncReview = useAsyncReview()
 
   // Animate pipeline steps during loading
   const startAnimation = useCallback(() => {
@@ -554,42 +518,9 @@ export default function ReviewPage() {
     startAnimation()
 
     try {
-      if (useAsync) {
-        // 异步模式：SSE 实时进度
-        await asyncReview.start(text, industry)
+      const res = await submitReview({ text, industry: industry as any })
 
-        // 轮询等待结果（替代 SSE，保证兼容性）
-        let pollCount = 0
-        const maxPolls = 60  // 最多等 60 秒
-        while (pollCount < maxPolls) {
-          await new Promise(r => setTimeout(r, 1000))
-          pollCount++
-          // 这里 SSE 模式下由 streamReviewProgress 回调处理
-          // 为简化，使用进度值判断是否完成
-          if (asyncReview.progress >= 1) {
-            break
-          }
-        }
-
-        // 注意：完整的 SSE 集成需要在回调中设置 result
-        // 这里降级为同步获取结果
-        const res = await submitReview({ text, industry: industry as any })
-        _processResult(res)
-      } else {
-        // 同步模式
-        const res = await submitReview({ text, industry: industry as any })
-        _processResult(res)
-      }
-    } catch (err: any) {
-      timerRef.current.forEach(clearTimeout)
-      timerRef.current = []
-      asyncReview.stop()
-      setError(err.message || "审查请求失败，请检查后端是否启动。")
-    } finally {
-      setLoading(false)
-    }
-
-    function _processResult(res: any) {
+      // Map pipeline steps from API
       const pipelineSteps: PipelineStep[] = (res as any).pipelineSteps?.length
         ? (res as any).pipelineSteps.map((s: any) => ({
             step: s.step, name: s.name, status: s.status, detail: s.detail, icon: s.icon,
@@ -601,8 +532,10 @@ export default function ReviewPage() {
             { step: 4, name: "替代建议生成", status: res.violations?.length ? "completed" : "skipped", detail: "生成合规建议", icon: "✏️" },
           ]
 
+      // Clear animation timers
       timerRef.current.forEach(clearTimeout)
       timerRef.current = []
+
       setAnimSteps(pipelineSteps.map(s => ({ ...s, status: "completed" as const })))
 
       const violations: Violation[] = (res.violations || []).map((v: any) => ({
@@ -612,21 +545,38 @@ export default function ReviewPage() {
         law: v.lawArticle || "",
         lawContent: v.lawContent || "",
         reason: v.explanation || "",
-        confidence: v.confidence ?? 0.8,
+        confidence: v.confidence ?? 0.5,
         severity: (v.severity || "medium") as RiskLevel,
         suggestion: v.suggestions?.[0]?.replacement || "需人工替换",
-        relatedCases: [],
+        relatedCases: (v.relatedCases || []).map((rc: any) => ({
+          title: rc.title || "",
+          penalty: rc.penalty || "",
+          article: rc.article || "",
+        })),
       }))
 
       setResult({
+        reviewId: res.reviewId || "",
         riskLevel: (res as any).overallRisk as RiskLevel,
         violations,
         highlightedText: res.highlightedText,
         pipelineSteps,
         processingTimeMs: (res as any).processingTimeMs || 0,
+        tokenUsage: (res as any).tokenUsage || undefined,
       })
+    } catch (err: any) {
+      timerRef.current.forEach(clearTimeout)
+      timerRef.current = []
+      if (err.status === 402) {
+        setNeedsUpgrade(true)
+        setError(null)
+      } else {
+        setError(err.message || "审查请求失败，请检查后端是否启动。")
+      }
+    } finally {
+      setLoading(false)
     }
-  }, [startAnimation, useAsync, asyncReview])
+  }, [startAnimation])
 
   const handleReset = useCallback(() => {
     setResult(null)
@@ -637,7 +587,7 @@ export default function ReviewPage() {
   const riskCfg = result ? RISK_CONFIG[result.riskLevel] : null
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background pt-20">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold tracking-tight">审查工作台</h1>
@@ -649,49 +599,111 @@ export default function ReviewPage() {
         <div className="space-y-6">
           <SettingsPanel />
 
-          {/* Input (dimmed during loading) */}
-          <div className={loading ? "pointer-events-none" : ""}>
-            <InputPanel
-              disabled={loading}
-              useAsync={useAsync}
-              onToggleAsync={() => setUseAsync(v => !v)}
-              onSubmit={handleSubmit}
-            />
-          </div>
-
-          {/* Pipeline visualization */}
-          {(loading || (result && result.pipelineSteps.length > 0)) && (
-            <PipelineStepper steps={loading ? animSteps : result!.pipelineSteps} isAnimating={loading} />
-          )}
-
-          {/* SSE 实时进度条（异步模式） */}
-          {loading && useAsync && asyncReview.requestId && (
-            <LiveProgressBar
-              progress={asyncReview.progress}
-              currentStep={asyncReview.currentStep}
-              queuePosition={asyncReview.queuePosition}
-            />
-          )}
-
-          {/* Error */}
-          {error && (
-            <Card className="border-red-200 bg-red-50/50">
-              <CardContent className="flex items-center gap-3 py-4">
-                <AlertTriangle className="size-5 text-red-500 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium text-red-700">审查失败</p>
-                  <p className="text-xs text-red-600/80">{error}</p>
+          {/* Onboarding banner */}
+          {showOnboarding && (
+            <Card className="border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+              <CardContent className="flex items-start gap-4 py-5">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <ShieldCheck className="size-5 text-emerald-600" />
                 </div>
-                <Button size="sm" variant="ghost" className="ml-auto" onClick={handleReset}>
-                  <RotateCcw className="size-3" /> 重试
-                </Button>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-emerald-800">欢迎使用广告合规 AI</h3>
+                  <p className="text-sm text-emerald-700 mt-1">
+                    输入您的广告文案，系统将自动检测是否含有违规内容。支持单条审查和批量上传两种模式。
+                  </p>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" variant="outline" className="bg-white/80" onClick={() => setShowOnboarding(false)}>
+                      知道了
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {/* Results */}
-          {result && !loading && (
+          {/* Mode switcher */}
+          <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
+            <button
+              onClick={() => { setMode("single"); setBatchResults(null); handleReset() }}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer
+                ${mode === "single" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <FileCheck className="size-4" />
+              单条审查
+            </button>
+            <button
+              onClick={() => setMode("batch")}
+              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer
+                ${mode === "batch" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Upload className="size-4" />
+              批量审查
+            </button>
+          </div>
+
+          {mode === "single" && (
+            <>
+              {/* Input (dimmed during loading) */}
+              <div className={loading ? "pointer-events-none" : ""}>
+                <InputPanel disabled={loading} onSubmit={handleSubmit} />
+              </div>
+
+              {/* Pipeline visualization */}
+              {(loading || (result && result.pipelineSteps.length > 0)) && (
+                <PipelineStepper steps={loading ? animSteps : result!.pipelineSteps} isAnimating={loading} />
+              )}
+
+              {/* Error */}
+              {error && (
+                <Card className="border-red-200 bg-red-50/50">
+                  <CardContent className="flex items-center gap-3 py-4">
+                    <AlertTriangle className="size-5 text-red-500 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-red-700">审查失败</p>
+                      <p className="text-xs text-red-600/80">{error}</p>
+                    </div>
+                    <Button size="sm" variant="ghost" className="ml-auto" onClick={handleReset}>
+                      <RotateCcw className="size-3" /> 重试
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Upgrade prompt */}
+              {needsUpgrade && (
+                <Card className="border-amber-200 bg-amber-50">
+                  <CardContent className="py-6 text-center">
+                    <Zap className="size-10 text-amber-500 mx-auto mb-3" />
+                    <h3 className="text-lg font-semibold text-amber-800">已达使用上限</h3>
+                    <p className="text-sm text-amber-700 mt-1 mb-4">当前套餐的每日审查次数已用完，升级后可继续使用。</p>
+                    <div className="flex justify-center gap-3">
+                      <Button onClick={() => router.push("/pricing")} className="bg-amber-600 hover:bg-amber-700">
+                        <Zap className="size-4" /> 查看套餐
+                      </Button>
+                      <Button variant="outline" onClick={handleReset}>
+                        稍后再说
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Results */}
+              {result && !loading && (
             <div className="space-y-6">
+              {/* High risk alert banner */}
+              {result.riskLevel === "high" && (
+                <div className="flex items-center gap-3 rounded-xl border-2 border-red-300 bg-red-50 p-4 shadow-lg shadow-red-100 animate-in slide-in-from-top-2">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-red-100">
+                    <AlertTriangle className="size-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-red-800">高风险警告</p>
+                    <p className="text-xs text-red-700/80">检测到高风险违规内容，建议立即修改，避免违反《广告法》</p>
+                  </div>
+                </div>
+              )}
+
               {/* Summary card */}
               <Card className={result.riskLevel === "pass" ? "border-emerald-200 bg-emerald-50/30" : "border-red-200 bg-red-50/30"}>
                 <CardContent className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 py-5">
@@ -704,12 +716,20 @@ export default function ReviewPage() {
                           ? "未检测到违规内容"
                           : `共检测到 ${result.violations.length} 处违规`}
                         {result.processingTimeMs > 0 && ` · ${result.processingTimeMs}ms`}
+                        {result.tokenUsage && result.tokenUsage.totalTokens
+                          ? ` · ${result.tokenUsage.totalTokens} tokens`
+                          : ""}
                       </p>
                     </div>
                   </div>
-                  <Badge className={`text-base px-4 py-1.5 ${riskCfg?.className}`}>
-                    {riskCfg?.label}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => exportSingleReview(result)}>
+                      <Download className="size-3.5" /> 导出
+                    </Button>
+                    <Badge className={`text-base px-4 py-1.5 ${riskCfg?.className}`}>
+                      {riskCfg?.label}
+                    </Badge>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -732,8 +752,8 @@ export default function ReviewPage() {
                     <AlertTriangle className="size-4" />
                     违规明细 · {result.violations.length} 项
                   </h3>
-                  <div className="grid gap-4">
-                    {result.violations.map((v) => <ViolationCard key={v.id} violation={v} />)}
+                    <div className="grid gap-4">
+                    {result.violations.map((v) => <ViolationCard key={v.id} violation={v} reviewId={result.reviewId} />)}
                   </div>
                 </div>
               )}
@@ -745,6 +765,32 @@ export default function ReviewPage() {
                 </Button>
               </div>
             </div>
+          )}
+            </>
+
+          )}
+
+          {mode === "batch" && (
+            <>
+              {!batchResults ? (
+                <BatchUpload onResults={(results) => {
+                  const summary = { high: 0, medium: 0, low: 0, pass: 0, error: 0 }
+                  for (const r of results) {
+                    const k = r.overall_risk
+                    if (k in summary) summary[k as keyof typeof summary]++
+                    else summary.error++
+                  }
+                  setBatchResults(results)
+                  setBatchSummary(summary)
+                }} />
+              ) : (
+                <BatchResultList
+                  results={batchResults}
+                  summary={batchSummary || { high: 0, medium: 0, low: 0, pass: 0, error: 0 }}
+                  onReset={() => { setBatchResults(null); setBatchSummary(null) }}
+                />
+              )}
+            </>
           )}
         </div>
       </div>

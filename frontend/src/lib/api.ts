@@ -6,14 +6,26 @@ import {
   StatsResponse,
 } from "@/types/review";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = "http://localhost:8001";
 
 function getStoredConfig() {
   if (typeof window === "undefined") return {};
   return {
     apiKey: localStorage.getItem("ad_agent_api_key") || "",
     baseUrl: localStorage.getItem("ad_agent_base_url") || "",
+    model: localStorage.getItem("ad_agent_model") || "",
   };
+}
+
+function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem("ad_agent_token");
+}
+
+function authHeaders(): Record<string, string> {
+  const token = getAuthToken();
+  if (token) return { Authorization: `Bearer ${token}` };
+  return {};
 }
 
 /** Convert snake_case keys to camelCase recursively */
@@ -30,29 +42,131 @@ function toCamelCase(obj: any): any {
   return obj;
 }
 
+// ── Auth ──────────────────────────────────────────────────────
+
+export async function login(username: string, password: string): Promise<{ token: string; username: string; user_id: number }> {
+  const res = await fetch(`${API_BASE}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.detail || data.error || "登录失败");
+  return data;
+}
+
+export async function register(username: string, password: string): Promise<{ token: string; username: string; user_id: number }> {
+  const res = await fetch(`${API_BASE}/api/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.detail || data.error || "注册失败");
+  return data;
+}
+
+export async function getMe(): Promise<{ user_id: number; username: string }> {
+  const res = await fetch(`${API_BASE}/api/me`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("未登录");
+  const data = await res.json();
+  if (!data.success) throw new Error("未登录");
+  return data;
+}
+
+export async function getMyReviews(limit = 50, risk?: string, query?: string, dateFrom?: string, dateTo?: string): Promise<{ reviews: any[] }> {
+  const params = new URLSearchParams({ limit: String(limit) })
+  if (risk && risk !== "all") params.set("risk", risk)
+  if (query) params.set("query", query)
+  if (dateFrom) params.set("date_from", dateFrom)
+  if (dateTo) params.set("date_to", dateTo)
+  const res = await fetch(`${API_BASE}/api/my-reviews?${params}`, { headers: authHeaders() });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err: any = new Error(data.detail || "获取历史记录失败");
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function testConnection(apiKey: string, baseUrl: string, model: string): Promise<{ success: boolean; message: string }> {
+  const res = await fetch(`${API_BASE}/api/test-connection`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ api_key: apiKey, base_url: baseUrl, model }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "连接测试失败");
+  return data;
+}
+
+export async function forgotPassword(username: string): Promise<{ reset_token: string }> {
+  const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.detail || "发送失败");
+  return data;
+}
+
+export async function resetPassword(username: string, resetToken: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, reset_token: resetToken, new_password: newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.success) throw new Error(data.detail || "重置失败");
+}
+
+export async function deleteAccount(): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/account`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.success) throw new Error(data.detail || "删除失败");
+}
+
+export async function getUsage(): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/usage`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("获取用量失败");
+  return res.json();
+}
+
+// ── Core API ──────────────────────────────────────────────────
+
 export async function submitReview(req: ReviewRequest): Promise<ReviewResponse> {
   const config = getStoredConfig();
   const res = await fetch(`${API_BASE}/api/review`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({
       text: req.text,
       industry: req.industry,
       platform: req.platform,
       api_key: config.apiKey || undefined,
       base_url: config.baseUrl || undefined,
+      model: config.model || undefined,
     }),
-    signal: AbortSignal.timeout(30000),
+    signal: AbortSignal.timeout(120000),
   });
-  if (!res.ok) throw new Error(`Review failed: ${res.status}`);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err: any = new Error(data.detail || `审查失败 (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
   return toCamelCase(data) as ReviewResponse;
 }
 
 export async function submitFeedback(req: FeedbackRequest): Promise<FeedbackResponse> {
   const res = await fetch(`${API_BASE}/api/feedback`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...authHeaders() },
     body: JSON.stringify({
       review_id: req.reviewId,
       violation_id: req.violationId,
@@ -65,174 +179,7 @@ export async function submitFeedback(req: FeedbackRequest): Promise<FeedbackResp
 }
 
 export async function getStats(): Promise<StatsResponse> {
-  const res = await fetch(`${API_BASE}/api/stats`);
+  const res = await fetch(`${API_BASE}/api/stats`, { headers: authHeaders() });
   if (!res.ok) throw new Error(`Stats failed: ${res.status}`);
   return res.json();
-}
-
-// ============================================================
-// 异步审查接口
-// ============================================================
-
-export interface AsyncReviewRequest {
-  text: string;
-  industry: string;
-  platform?: string;
-  priority?: number;
-}
-
-export interface AsyncReviewResponse {
-  requestId: string;
-  status: "queued" | "processing" | "completed" | "failed";
-  position: number;
-  message: string;
-}
-
-export interface ReviewStatusResponse {
-  requestId: string;
-  status: "queued" | "processing" | "completed" | "failed";
-  progress: number;
-  currentStep: string;
-  queuedAt: string;
-  startedAt: string;
-  completedAt: string;
-  positionInQueue: number;
-  result?: any;
-  error?: string;
-}
-
-export async function submitAsyncReview(req: AsyncReviewRequest): Promise<AsyncReviewResponse> {
-  const config = getStoredConfig();
-  const res = await fetch(`${API_BASE}/api/review/async`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: req.text,
-      industry: req.industry,
-      platform: req.platform,
-      priority: req.priority ?? 5,
-      api_key: config.apiKey || undefined,
-      base_url: config.baseUrl || undefined,
-    }),
-  });
-  if (!res.ok) throw new Error(`Async review failed: ${res.status}`);
-  return toCamelCase(await res.json()) as AsyncReviewResponse;
-}
-
-export async function getReviewStatus(requestId: string): Promise<ReviewStatusResponse> {
-  const res = await fetch(`${API_BASE}/api/review/${requestId}`);
-  if (!res.ok) throw new Error(`Status check failed: ${res.status}`);
-  return toCamelCase(await res.json()) as ReviewStatusResponse;
-}
-
-/**
- * SSE 实时进度推送。
- * 使用 EventSource 连接 /api/review/{requestId}/stream
- */
-export function streamReviewProgress(
-  requestId: string,
-  onProgress: (data: ReviewStatusResponse) => void,
-  onCompleted: (result: any) => void,
-  onFailed: (error: string) => void,
-): () => void {
-  const es = new EventSource(`${API_BASE}/api/review/${requestId}/stream`);
-
-  es.addEventListener("progress", (event: MessageEvent) => {
-    const data = toCamelCase(JSON.parse(event.data));
-    onProgress(data as ReviewStatusResponse);
-  });
-
-  es.addEventListener("completed", (event: MessageEvent) => {
-    const data = toCamelCase(JSON.parse(event.data));
-    onCompleted(data.result);
-    es.close();
-  });
-
-  es.addEventListener("failed", (event: MessageEvent) => {
-    const data = JSON.parse(event.data);
-    onFailed(data.error || "未知错误");
-    es.close();
-  });
-
-  es.onerror = () => {
-    // 连接错误时关闭
-    es.close();
-  };
-
-  return () => es.close();
-}
-
-// ============================================================
-// 审查历史接口
-// ============================================================
-
-export interface ReviewListItem {
-  reviewId: string;
-  textPreview: string;
-  status: string;
-  overallRisk: string;
-  violationCount: number;
-  industry: string;
-  createdAt: string;
-}
-
-export interface ReviewListResponse {
-  reviews: ReviewListItem[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-export async function listReviews(limit = 20, offset = 0): Promise<ReviewListResponse> {
-  const res = await fetch(`${API_BASE}/api/reviews?limit=${limit}&offset=${offset}`);
-  if (!res.ok) throw new Error(`List reviews failed: ${res.status}`);
-  return toCamelCase(await res.json()) as ReviewListResponse;
-}
-
-export async function getReviewDetail(reviewId: string): Promise<any> {
-  const res = await fetch(`${API_BASE}/api/reviews/${reviewId}`);
-  if (!res.ok) throw new Error(`Get review failed: ${res.status}`);
-  return toCamelCase(await res.json());
-}
-
-// ============================================================
-// 反馈统计接口
-// ============================================================
-
-export interface FeedbackStatsResponse {
-  totalFeedback: number;
-  confirmCount: number;
-  modifyCount: number;
-  dismissCount: number;
-  wordFeedback: any[];
-  categoryFeedback: any[];
-  learningAdjustments: any[];
-}
-
-export async function getFeedbackStats(): Promise<FeedbackStatsResponse> {
-  const res = await fetch(`${API_BASE}/api/feedback/stats`);
-  if (!res.ok) throw new Error(`Feedback stats failed: ${res.status}`);
-  return toCamelCase(await res.json()) as FeedbackStatsResponse;
-}
-
-// ============================================================
-// 性能监控接口
-// ============================================================
-
-export interface PerformanceMetrics {
-  p50LatencyMs: number;
-  p95LatencyMs: number;
-  p99LatencyMs: number;
-  avgLatencyMs: number;
-  reqPerSecond: number;
-  totalRequests: number;
-  activeRequests: number;
-  queuedRequests: number;
-  errorRate: number;
-}
-
-export async function getPerformanceMetrics(): Promise<PerformanceMetrics> {
-  const res = await fetch(`${API_BASE}/api/metrics`);
-  if (!res.ok) throw new Error(`Metrics failed: ${res.status}`);
-  return toCamelCase(await res.json()) as PerformanceMetrics;
 }
