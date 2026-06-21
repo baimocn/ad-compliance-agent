@@ -2,6 +2,7 @@
 import sys
 import time
 import hashlib
+import re
 from pathlib import Path
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT / 'pipeline'))
@@ -17,7 +18,7 @@ from tools.context_judge import ContextJudge
 from tools.regulation_rag import RegulationRAG
 from tools.rewrite import RewriteGenerator
 from storage import VmemStore
-from langchain_openai import ChatOpenAI
+from llm_compat import CompatibleLLM
 
 
 class ComplianceAgent:
@@ -29,7 +30,7 @@ class ComplianceAgent:
             "temperature": 0,
         }
         # 默认 LLM
-        self._llm = ChatOpenAI(**self._default_config)
+        self._llm = CompatibleLLM(**self._default_config)
         # 工具
         self._matcher = BannedWordMatcher(config.BANNED_WORDS_PATH)
         self._judge = ContextJudge(self._llm)
@@ -37,11 +38,11 @@ class ComplianceAgent:
         self._rag = RegulationRAG(self._store)
         self._rewriter = RewriteGenerator(self._llm, config.REPLACEMENT_PATH)
 
-    def _get_llm(self, api_key: str = None, base_url: str = None) -> ChatOpenAI:
-        """获取 LLM 客户端：前端传了就用前端的，否则用默认的"""
+    def _get_llm(self, api_key: str = None, base_url: str = None, model: str = None):
+        """获取 LLM 客户端：前端传了就用前端的参数，否则用默认的"""
         if api_key and api_key.strip():
-            return ChatOpenAI(
-                model=self._default_config["model"],
+            return CompatibleLLM(
+                model=model or self._default_config["model"],
                 base_url=base_url or self._default_config["base_url"],
                 api_key=api_key.strip(),
                 temperature=0,
@@ -53,7 +54,7 @@ class ComplianceAgent:
         review_id = f"CR-{int(start_time)}-{hashlib.md5(request.text.encode()).hexdigest()[:4]}"
 
         # 获取 LLM 客户端（前端传了 key 就用前端的）
-        llm = self._get_llm(request.api_key, request.base_url)
+        llm = self._get_llm(request.api_key, request.base_url, request.model)
         judge = ContextJudge(llm) if request.api_key else self._judge
         rewriter = RewriteGenerator(llm, self._rewriter._replacements) if request.api_key else self._rewriter
 
@@ -91,7 +92,10 @@ class ComplianceAgent:
         ))
 
         # Step 2: LLM 语境判断（并发）
-        judgments = await judge.batch_judge(request.text, hits, request.industry.value)
+        judgments, judge_in_tokens, judge_out_tokens = await judge.batch_judge(request.text, hits, request.industry.value)
+        total_token_usage["prompt_tokens"] += judge_in_tokens
+        total_token_usage["completion_tokens"] += judge_out_tokens
+        total_token_usage["total_tokens"] += judge_in_tokens + judge_out_tokens
 
         # 过滤掉不违规的命中
         confirmed_hits = []
@@ -141,6 +145,9 @@ class ComplianceAgent:
             rag_results = self._rag.search(hit.word, request.industry.value, top_k=3)
             total_rag_sources += len(rag_results)
 
+            # 从 rag_results 中提取相关处罚案例
+            related_cases = self._extract_related_cases(rag_results)
+
             # 确定风险等级
             severity = RiskLevel.HIGH if judgment.confidence > 0.8 else RiskLevel.MEDIUM
 
@@ -156,7 +163,7 @@ class ComplianceAgent:
                 law_content=rag_results[0].get('value', '')[:200] if rag_results else "",
                 explanation=judgment.reasoning,
                 suggestions=[],
-                related_cases=[],
+                related_cases=related_cases,
             ))
 
         pipeline_steps.append(PipelineStep(
@@ -165,10 +172,13 @@ class ComplianceAgent:
         ))
 
         # Step 4: 生成替代建议
-        suggestions = await rewriter.generate(
+        suggestions, rewrite_in_tokens, rewrite_out_tokens = await rewriter.generate(
             request.text,
             [{'word': v.text, 'category': v.category} for v in violations]
         )
+        total_token_usage["prompt_tokens"] += rewrite_in_tokens
+        total_token_usage["completion_tokens"] += rewrite_out_tokens
+        total_token_usage["total_tokens"] += rewrite_in_tokens + rewrite_out_tokens
         for v, s in zip(violations, suggestions):
             v.suggestions = [s]
 
@@ -207,6 +217,34 @@ class ComplianceAgent:
             marked = f'<mark style="background:{color}" title="{v.category}: {v.explanation}">{v.text}</mark>'
             result = result[:v.start_index] + marked + result[v.end_index:]
         return result
+
+    def _extract_related_cases(self, rag_results: list[dict]) -> list[RelatedCase]:
+        """从 RAG 检索结果中提取处罚案例，填充 related_cases 字段"""
+        cases = []
+        seen = set()
+        for r in rag_results:
+            if r.get("source") != "penalty_case":
+                continue
+            value = r.get("value", "")
+            # 解析存储格式：【案例名】违法内容：...。处罚：...。
+            m = re.search(r"【([^】]+)】", value)
+            title = m.group(1).strip() if m else value[:30]
+            # 提取处罚金额
+            m2 = re.search(r"处罚：([^。]+)", value)
+            penalty = m2.group(1).strip() if m2 else "详见案例"
+            # 提取违法内容作为法条参考
+            m3 = re.search(r"违法内容：([^。]+)", value)
+            article = m3.group(1).strip()[:50] if m3 else ""
+
+            if title in seen:
+                continue
+            seen.add(title)
+            cases.append(RelatedCase(
+                title=title,
+                penalty=penalty,
+                article=article,
+            ))
+        return cases[:3]
 
     def close(self):
         self._store.close()

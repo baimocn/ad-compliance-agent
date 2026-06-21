@@ -289,18 +289,25 @@ function ViolationCard({ violation }: { violation: Violation }) {
 // ── Settings Panel ───────────────────────────────────────────
 
 function SettingsPanel() {
-  const [apiKey, setApiKey] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("ad_agent_api_key") || "" : "")
-  const [baseUrl, setBaseUrl] = useState(
-    typeof window !== "undefined" ? localStorage.getItem("ad_agent_base_url") || "https://api.deepseek.com" : "https://api.deepseek.com")
+  const [apiKey, setApiKey] = useState("")
+  const [baseUrl, setBaseUrl] = useState("https://api.deepseek.com")
   const [showKey, setShowKey] = useState(false)
   const [open, setOpen] = useState(false)
   const [saved, setSaved] = useState(false)
-  const hasKey = typeof window !== "undefined" && !!localStorage.getItem("ad_agent_api_key")
+  const [hasKey, setHasKey] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem("ad_agent_api_key") || ""
+    const storedUrl = localStorage.getItem("ad_agent_base_url") || "https://api.deepseek.com"
+    setApiKey(stored)
+    setBaseUrl(storedUrl)
+    setHasKey(!!stored)
+  }, [])
 
   const handleSave = () => {
     localStorage.setItem("ad_agent_api_key", apiKey)
     localStorage.setItem("ad_agent_base_url", baseUrl)
+    setHasKey(!!apiKey)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -602,8 +609,8 @@ export default function ReviewPage() {
         id: v.id,
         word: v.text,
         type: v.category,
-        law: v.law_article || "",
-        lawContent: v.law_content || "",
+        law: v.lawArticle || "",
+        lawContent: v.lawContent || "",
         reason: v.explanation || "",
         confidence: v.confidence ?? 0.8,
         severity: (v.severity || "medium") as RiskLevel,

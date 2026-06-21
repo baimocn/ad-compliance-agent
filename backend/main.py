@@ -1,14 +1,20 @@
-"""FastAPI 应用 v2 — 广告法合规审查 API（生产级）
+"""FastAPI 应用 v2 — 广告法合规审查 API（生产级 + 用户/计费/批量审查）
 
-新增功能：
+合并两个分支的功能：
 - 异步审查接口 + 请求队列 + 并发控制（最多 5 个并发）
 - ContextJudge LLM 并发信号量（默认 3）
 - 请求追踪链（request_id → review_id → violation_id）
 - 性能监控中间件（P50/P95/P99）
 - SSE 实时进度推送
 - 反馈统计接口 + 反馈闭环学习
+- 用户账号系统（注册/登录/找回密码/注销）
+- 套餐计费系统（套餐/用量/升级/模拟支付）
+- 批量审查、测试连接、我的审查
 """
 import sys
+import re
+import csv
+import io
 import time
 import uuid
 import asyncio
@@ -21,12 +27,13 @@ _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT / 'pipeline'))
 sys.path.insert(0, str(_PROJECT / 'backend'))
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Header, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from schemas import (
     ReviewRequest, ReviewResponse, FeedbackRequest, FeedbackResponse,
-    StatsResponse, AsyncReviewRequest, AsyncReviewResponse,
+    StatsResponse, UpgradeRequest,
+    AsyncReviewRequest, AsyncReviewResponse,
     ReviewStatusResponse, FeedbackStatsResponse, PerformanceMetrics,
 )
 from agent import ComplianceAgent
@@ -271,7 +278,7 @@ request_queue = RequestQueue(max_concurrent=MAX_CONCURRENT_REVIEWS)
 
 
 # ============================================================
-# 后台审查任务
+# 后台审查任务（异步接口无鉴权，不传 user_id）
 # ============================================================
 
 async def _run_review_task(request_id: str):
@@ -282,7 +289,6 @@ async def _run_review_task(request_id: str):
         await request_queue.start_processing(request_id)
 
         # 获取请求数据
-        status = await request_queue.get_status(request_id)
         req_data = None
         async with request_queue._lock:
             if request_id in request_queue._requests:
@@ -309,13 +315,12 @@ async def _run_review_task(request_id: str):
         # 步骤 3: RAG 检索
         await request_queue.update_progress(request_id, 0.6, "步骤3/4: 法规检索")
 
-        # 执行审查（这里我们复用 agent_instance.review，
-        # 真实环境下可在 agent 内部嵌入更细粒度的进度回调）
+        # 执行审查
         response = await agent_instance.review(req)
 
         await request_queue.update_progress(request_id, 0.85, "步骤4/4: 生成建议")
 
-        # 保存到历史
+        # 保存到历史（异步接口无鉴权，不传 user_id）
         review_store.save_review(
             response.review_id, req.text, response.status,
             response.overall_risk.value if hasattr(response.overall_risk, 'value') else str(response.overall_risk),
@@ -382,11 +387,197 @@ async def shutdown():
 
 
 # ============================================================
-# 同步审查接口（保留兼容）
+# 认证依赖
+# ============================================================
+
+def get_current_user(authorization: str = Header(None)):
+    """从 Authorization header 解析 token，返回用户信息或 None"""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.replace("Bearer ", "")
+    return review_store.get_user_by_token(token)
+
+
+# ============================================================
+# 用户认证 API
+# ============================================================
+
+@app.post("/api/auth/register")
+async def register(body: dict):
+    """注册：{username, password}"""
+    username = (body.get("username") or "").strip()
+    password = body.get("password") or ""
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="用户名和密码不能为空")
+    if len(password) < 8:
+        raise HTTPException(status_code=400, detail="密码长度至少8位")
+    if not re.search(r'[a-zA-Z]', password) or not re.search(r'\d', password):
+        raise HTTPException(status_code=400, detail="密码必须包含字母和数字")
+    result = review_store.create_user(username, password)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    # 自动登录，返回 token
+    token = review_store.create_token(result["user_id"])
+    return {"success": True, "token": token, "username": username, "user_id": result["user_id"]}
+
+
+@app.post("/api/auth/login")
+async def login(body: dict):
+    """登录：{username, password}"""
+    username = (body.get("username") or "").strip()
+    password = body.get("password") or ""
+    result = review_store.verify_user(username, password)
+    if not result["success"]:
+        raise HTTPException(status_code=401, detail=result["error"])
+    token = review_store.create_token(result["user_id"])
+    return {"success": True, "token": token, "username": result["username"], "user_id": result["user_id"]}
+
+
+@app.get("/api/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    """获取当前登录用户信息"""
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    return {"success": True, "user_id": user["user_id"], "username": user["username"]}
+
+
+@app.get("/api/my-reviews")
+async def get_my_reviews(user: dict = Depends(get_current_user), limit: int = 50,
+                         risk: str = None, query: str = None,
+                         date_from: str = None, date_to: str = None):
+    """获取我的审查历史，支持筛选"""
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    reviews = review_store.get_user_reviews(user["user_id"], limit, risk, query, date_from, date_to)
+    return {"success": True, "reviews": reviews}
+
+
+@app.post("/api/auth/forgot-password")
+async def forgot_password(body: dict):
+    username = (body.get("username") or "").strip()
+    if not username:
+        raise HTTPException(status_code=400, detail="请输入用户名")
+    result = review_store.create_password_reset(username)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"success": True, "reset_token": result["reset_token"],
+            "message": "重置令牌已生成（hackathon 阶段直接返回，正式上线应通过邮件发送）"}
+
+
+@app.post("/api/auth/reset-password")
+async def reset_password(body: dict):
+    username = (body.get("username") or "").strip()
+    reset_token = (body.get("reset_token") or "").strip()
+    new_password = body.get("new_password") or ""
+    if not username or not reset_token or not new_password:
+        raise HTTPException(status_code=400, detail="参数不完整")
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="密码长度至少8位")
+    if not re.search(r'[a-zA-Z]', new_password) or not re.search(r'\d', new_password):
+        raise HTTPException(status_code=400, detail="密码必须包含字母和数字")
+    result = review_store.reset_password(username, reset_token, new_password)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"success": True, "message": "密码已重置"}
+
+
+@app.delete("/api/account")
+async def delete_account(user: dict = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    review_store.delete_account(user["user_id"])
+    return {"success": True, "message": "账户及所有数据已删除"}
+
+
+# ============================================================
+# 计费 API
+# ============================================================
+
+@app.get("/api/plans")
+async def get_plans():
+    return {"success": True, "plans": review_store.get_plans()}
+
+
+@app.get("/api/my-plan")
+async def get_my_plan(user: dict = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    return {"success": True, "plan": review_store.get_user_plan(user["user_id"])}
+
+
+@app.get("/api/usage")
+async def get_usage(user: dict = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    return {"success": True, **review_store.get_usage_stats(user["user_id"])}
+
+
+@app.post("/api/upgrade")
+async def upgrade(body: UpgradeRequest, user: dict = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    result = review_store.upgrade_plan(user["user_id"], body.plan_id)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"success": True, "plan": result["plan"]}
+
+
+@app.post("/api/simulate-payment")
+async def simulate_payment(body: UpgradeRequest, user: dict = Depends(get_current_user)):
+    """模拟支付流程 -- hackathon 阶段，点击即成功"""
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
+    result = review_store.upgrade_plan(user["user_id"], body.plan_id)
+    if not result["success"]:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return {"success": True, "message": f"已升级至 {result['plan']['name']}", "plan": result["plan"]}
+
+
+@app.post("/api/test-connection")
+async def test_connection(body: dict = None):
+    """测试 LLM API 连接"""
+    api_key = (body.get("api_key") or "").strip() if body else ""
+    base_url = (body.get("base_url") or "").strip() if body else ""
+    model = (body.get("model") or "").strip() if body else ""
+    if not api_key:
+        raise HTTPException(status_code=400, detail="请输入 API Key")
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key, base_url=base_url or config.LLM_BASE_URL)
+        chat_model = model or config.LLM_MODEL
+        resp = client.chat.completions.create(
+            model=chat_model,
+            messages=[{"role": "user", "content": "ping"}],
+            max_tokens=10,
+        )
+        choice = resp.choices[0].message if resp.choices else None
+        content = (choice.content or "") if choice else ""
+        reasoning = getattr(choice, "reasoning_content", "") if choice else ""
+        if resp and (content.strip() or reasoning.strip()):
+            return {"success": True, "message": "连接成功"}
+        raise HTTPException(status_code=400, detail="连接失败：模型未返回内容")
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_str = str(e)[:200]
+        if "401" in error_str or "unauthorized" in error_str.lower() or "invalid" in error_str.lower():
+            raise HTTPException(status_code=400, detail="认证失败：API Key 无效")
+        raise HTTPException(status_code=400, detail=f"连接失败：{error_str[:100]}")
+
+
+# ============================================================
+# 同步审查接口（带用户鉴权 + 用量检查）
 # ============================================================
 
 @app.post("/api/review", response_model=ReviewResponse)
-async def review(request: ReviewRequest):
+async def review(request: ReviewRequest, user: dict = Depends(get_current_user)):
+    if agent_instance is None:
+        raise HTTPException(status_code=503, detail="服务尚未初始化，请稍后重试")
+    if user:
+        review_store.ensure_user_plan(user["user_id"])
+        limit_check = review_store.check_usage_limit(user["user_id"])
+        if not limit_check["allowed"]:
+            raise HTTPException(status_code=402, detail=limit_check["reason"])
     try:
         response = await agent_instance.review(request)
         review_store.save_review(
@@ -396,19 +587,20 @@ async def review(request: ReviewRequest):
             [{"text": v.text, "category": v.category,
               "severity": v.severity.value if hasattr(v.severity, 'value') else str(v.severity)}
              for v in response.violations],
-            request.industry.value if hasattr(request.industry, 'value') else str(request.industry)
+            request.industry.value if hasattr(request.industry, 'value') else str(request.industry),
+            user_id=user["user_id"] if user else None,
         )
+        if user:
+            tokens = response.token_usage.get("total_tokens", 0) if response.token_usage else 0
+            review_store.log_usage(user["user_id"], review_count=1, tokens=tokens)
         return response
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = str(e)
-        return ReviewResponse(
-            review_id=f"ERR-{int(time.time())}",
-            status="error",
-            overall_risk="pass",
-            violations=[],
-            highlighted_text=request.text,
-            summary=f"审查出错: {error_msg[:200]}。请检查 API Key 是否正确。",
-            reviewed_at=time.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        raise HTTPException(
+            status_code=500,
+            detail=f"审查出错: {error_msg[:200]}。请检查 API Key 是否正确。",
         )
 
 
@@ -515,11 +707,13 @@ async def review_stream(request_id: str):
 
 
 # ============================================================
-# 反馈接口
+# 反馈接口（带用户鉴权 + 异步反馈学习）
 # ============================================================
 
 @app.post("/api/feedback", response_model=FeedbackResponse)
-async def feedback(request: FeedbackRequest):
+async def feedback(request: FeedbackRequest, user: dict = Depends(get_current_user)):
+    if not user:
+        raise HTTPException(status_code=401, detail="未登录")
     review_store.save_feedback(
         request.review_id,
         request.violation_id,
@@ -544,7 +738,7 @@ async def _apply_feedback_learning(request: FeedbackRequest):
         if agent_instance and hasattr(agent_instance, '_store'):
             store = agent_instance._store
             action = request.action.value if hasattr(request.action, 'value') else str(request.action)
-            # CONFIRM → 提升置信度，DISMISS → 降低置信度
+            # CONFIRM -> 提升置信度，DISMISS -> 降低置信度
             delta = 0.05 if action == "confirm" else (-0.1 if action == "dismiss" else -0.05)
             if hasattr(store, 'update_confidence_by_keyword'):
                 store.update_confidence_by_keyword(request.violation_id, delta)
@@ -557,8 +751,10 @@ async def _apply_feedback_learning(request: FeedbackRequest):
 # ============================================================
 
 @app.get("/api/stats", response_model=StatsResponse)
-async def stats():
-    return review_store.get_stats()
+async def stats(user: dict = Depends(get_current_user)):
+    """统计接口，支持可选 user_id 筛选。"""
+    user_id = user["user_id"] if user else None
+    return review_store.get_stats(user_id)
 
 
 @app.get("/api/health")
@@ -608,3 +804,119 @@ async def get_review(review_id: str):
     if not result:
         raise HTTPException(status_code=404, detail=f"审查记录 {review_id} 不存在")
     return result
+
+
+# ============================================================
+# 批量审查 API
+# ============================================================
+
+@app.post("/api/batch-review")
+async def batch_review(
+    file: UploadFile = File(...),
+    industry: str = Form("general"),
+    api_key: str = Form(""),
+    base_url: str = Form(""),
+    model: str = Form(""),
+    user: dict = Depends(get_current_user),
+):
+    """批量审查：上传 txt/csv 文件，逐行审查"""
+    content = await file.read()
+    texts = []
+    filename = file.filename or "upload.txt"
+
+    try:
+        if filename.endswith(".csv"):
+            # 解析 CSV：取第一列非空行
+            text_io = io.StringIO(content.decode("utf-8", errors="replace"))
+            reader = csv.reader(text_io)
+            for row in reader:
+                if row and row[0].strip():
+                    texts.append(row[0].strip())
+        else:
+            # 默认按 txt 处理：每行一条文案
+            text_io = content.decode("utf-8", errors="replace")
+            for line in text_io.splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    texts.append(line)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"文件解析失败：{str(e)}")
+
+    if not texts:
+        raise HTTPException(status_code=400, detail="文件中未找到可审查的文案")
+    if len(texts) > 100:
+        raise HTTPException(status_code=400, detail=f"最多支持 100 条文案，当前 {len(texts)} 条")
+
+    if user:
+        review_store.ensure_user_plan(user["user_id"])
+        limit_check = review_store.check_usage_limit(user["user_id"])
+        if not limit_check["allowed"]:
+            raise HTTPException(status_code=402, detail=limit_check["reason"])
+
+    from schemas import Industry
+    try:
+        ind = Industry(industry)
+    except ValueError:
+        ind = Industry.GENERAL
+
+    results = []
+    for i, text in enumerate(texts):
+        try:
+            req = ReviewRequest(text=text, industry=ind, api_key=api_key or None, base_url=base_url or None, model=model or None)
+            resp = await agent_instance.review(req)
+            results.append({
+                "index": i + 1,
+                "text": text[:100],
+                "status": resp.status,
+                "overall_risk": resp.overall_risk.value if hasattr(resp.overall_risk, 'value') else str(resp.overall_risk),
+                "violation_count": len(resp.violations),
+                "violations": [{"text": v.text, "category": v.category, "severity": v.severity.value if hasattr(v.severity, 'value') else str(v.severity), "suggestion": v.suggestions[0].replacement if v.suggestions else ""} for v in resp.violations],
+                "review_id": resp.review_id,
+            })
+            # 保存审查记录
+            review_store.save_review(
+                resp.review_id, text, resp.status,
+                resp.overall_risk.value if hasattr(resp.overall_risk, 'value') else str(resp.overall_risk),
+                len(resp.violations),
+                [{"text": v.text, "category": v.category,
+                  "severity": v.severity.value if hasattr(v.severity, 'value') else str(v.severity)} for v in resp.violations],
+                industry,
+                user_id=user["user_id"] if user else None,
+            )
+        except Exception as e:
+            results.append({
+                "index": i + 1,
+                "text": text[:100],
+                "status": "error",
+                "overall_risk": "error",
+                "violation_count": 0,
+                "violations": [],
+                "error": str(e)[:200],
+            })
+
+    # 汇总
+    total = len(results)
+    risk_counts = {"high": 0, "medium": 0, "low": 0, "pass": 0, "error": 0}
+    for r in results:
+        k = r["overall_risk"]
+        if k in risk_counts:
+            risk_counts[k] += 1
+        else:
+            risk_counts["error"] += 1
+
+    if user:
+        success_count = sum(1 for r in results if r["status"] != "error")
+        review_store.log_usage(user["user_id"], review_count=success_count, batch_count=1)
+
+    return {
+        "success": True,
+        "total": total,
+        "results": results,
+        "summary": {
+            "high": risk_counts["high"],
+            "medium": risk_counts["medium"],
+            "low": risk_counts["low"],
+            "pass": risk_counts["pass"],
+            "error": risk_counts["error"],
+        }
+    }

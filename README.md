@@ -52,6 +52,11 @@
 | **三层知识库** | 法规条文 110 条 + 处罚案例 50 条 + 行业规则 7 个行业，vmem 融合搜索 |
 | **替代文案生成** | 70 条禁用→替代映射表 + LLM 智能改写，给出合规替代建议 |
 | **反馈记忆** | 用户确认/修改/驳回 → SQLite 持久化，越用越准的数据飞轮 |
+| **异步审查** | 请求队列 + 并发控制（最大 5 并发）+ SSE 实时进度推送 |
+| **性能监控** | P50/P95/P99 延迟统计、吞吐量、错误率实时监控 |
+| **用户系统** | 注册/登录/Token 鉴权/密码重置/账户注销 |
+| **套餐计费** | 免费版/专业版/企业版，用量限制 + 升级 + 模拟支付 |
+| **批量审查** | 上传 txt/csv 文件，逐行审查，最多 100 条/批 |
 
 ---
 
@@ -113,11 +118,21 @@ python evaluation/test_e2e.py
 
 ### 3. Pydantic 全链路结构化输出
 
-从 `ReviewRequest` → `BannedWordHit` → `ContextJudgment` → `Violation` → `ReviewResponse`，全程 Pydantic 数据模型校验，LangChain Function Calling 保证 LLM 输出结构化 JSON。
+从 `ReviewRequest` → `BannedWordHit` → `ContextJudgment` → `Violation` → `ReviewResponse`，全程 Pydantic 数据模型校验，LLM 输出结构化 JSON。
 
 ### 4. 反馈记忆系统
 
 用户对审查结果的确认/修改/驳回 → SQLite 持久化 → 贝叶斯置信度更新 → 下次审查更准确。不是静态工具，是越用越准的数据飞轮。
+
+### 5. LLM 兼容层（CompatibleLLM）
+
+自研 LLM 包装器，兼容推理模型（如 mimo 等），解决 `reasoning_content` 与 `content` 的差异问题，统一 `ainvoke` 接口。
+
+### 6. 异步审查 + 并发控制
+
+- `RequestQueue`：Semaphore 并发控制（最大 5 并发），队列最大 100 请求
+- `PerformanceMonitor`：P50/P95/P99 延迟百分位 + 吞吐量 + 错误率
+- SSE 实时进度推送：客户端通过 `EventSource` 接收审查进度
 
 ---
 
@@ -128,6 +143,7 @@ python evaluation/test_e2e.py
 3. **零误报**：Agent 标记为违规的内容 100% 确实违规（FP=0）
 4. **评委 5 秒就懂**："一次罚款 20 万，10 秒帮你查出来"
 5. **快 100 倍**：30 题审查 36 秒完成，人工预估 60 分钟
+6. **生产级特性**：异步队列、并发控制、性能监控、用户鉴权、套餐计费
 
 ---
 
@@ -135,13 +151,15 @@ python evaluation/test_e2e.py
 
 | 层 | 选择 |
 |---|------|
-| Agent 框架 | LangChain + Function Calling |
-| LLM | DeepSeek-V4-Flash |
+| Agent 框架 | Function Calling + 自研 CompatibleLLM 兼容层 |
+| LLM | DeepSeek-V4-Flash（支持推理模型 mimo 等） |
 | 知识库 | vmem (SQLite + FTS5 + numpy + bge-small-zh-v1.5) |
-| 后端 | FastAPI |
+| 后端 | FastAPI + 异步队列 + 并发控制 |
 | 前端 | Next.js + shadcn/ui + Tailwind CSS |
 | 数据模型 | Pydantic v2 |
-| 反馈存储 | SQLite (review.db) |
+| 存储 | SQLite (review.db + vmem.db) |
+| 用户认证 | bcrypt + Token 鉴权 |
+| 实时推送 | SSE (Server-Sent Events) |
 
 ---
 
@@ -203,11 +221,12 @@ python pipeline/run_pipeline.py
 
 ```
 ├── backend/                    # FastAPI 后端
-│   ├── main.py                 # FastAPI 应用入口
+│   ├── main.py                 # FastAPI 应用入口（25 个 API 端点）
 │   ├── agent.py                # ComplianceAgent 主编排
-│   ├── schemas.py              # Pydantic 数据模型
+│   ├── schemas.py              # Pydantic 数据模型（含异步/性能/计费模型）
 │   ├── config.py               # 配置加载（.env）
-│   ├── store.py                # 审查记录 + 反馈存储 (SQLite)
+│   ├── store.py                # 用户/审查/计费/反馈存储 (SQLite)
+│   ├── llm_compat.py           # LLM 兼容层（支持推理模型）
 │   └── tools/                  # Agent 工具集
 │       ├── banned_word.py      # 工具1: 禁用词规则匹配
 │       ├── context_judge.py    # 工具2: LLM 语境判断
@@ -234,9 +253,26 @@ python pipeline/run_pipeline.py
 │   ├── src/app/                # 页面
 │   │   ├── page.tsx            # 首页
 │   │   ├── review/page.tsx     # 审查工作台
-│   │   └── stats/page.tsx      # 数据统计
-│   ├── src/components/ui/      # shadcn/ui 组件
-│   ├── src/lib/api.ts          # API 客户端
+│   │   ├── history/page.tsx    # 审查历史
+│   │   ├── stats/page.tsx      # 数据统计
+│   │   ├── (auth)/             # 认证页面
+│   │   │   ├── login/          # 登录
+│   │   │   ├── register/       # 注册
+│   │   │   └── forgot-password/ # 找回密码
+│   │   ├── pricing/page.tsx    # 套餐定价
+│   │   ├── settings/page.tsx   # 个人设置
+│   │   └── usage/page.tsx      # 用量统计
+│   ├── src/components/         # 组件
+│   │   ├── ui/                 # shadcn/ui 基础组件
+│   │   ├── nav-bar.tsx         # 导航栏
+│   │   ├── batch-upload.tsx    # 批量上传
+│   │   └── batch-result-list.tsx # 批量结果
+│   ├── src/lib/
+│   │   ├── api.ts              # API 客户端
+│   │   ├── auth.tsx            # 认证上下文
+│   │   └── export.ts           # 导出工具
+│   ├── src/hooks/
+│   │   └── use-scroll-reveal.ts
 │   └── src/types/review.ts     # TypeScript 类型定义
 │
 ├── vmem/                       # 记忆向量存储系统
@@ -265,12 +301,56 @@ python pipeline/run_pipeline.py
 
 ## API 接口
 
+### 认证相关
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| `POST` | `/api/review` | 提交广告文案进行合规审查 |
-| `POST` | `/api/feedback` | 提交审查结果反馈（确认/修改/驳回） |
-| `GET` | `/api/stats` | 获取审查统计数据 |
+| `POST` | `/api/auth/register` | 用户注册 |
+| `POST` | `/api/auth/login` | 用户登录 |
+| `GET` | `/api/me` | 获取当前用户信息 |
+| `POST` | `/api/auth/forgot-password` | 找回密码 |
+| `POST` | `/api/auth/reset-password` | 重置密码 |
+| `DELETE` | `/api/account` | 注销账户 |
+
+### 审查相关
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/review` | 同步审查（支持可选鉴权） |
+| `POST` | `/api/review/async` | 异步审查（返回 request_id） |
+| `GET` | `/api/review/{request_id}` | 查询异步审查状态 |
+| `GET` | `/api/review/{request_id}/stream` | SSE 实时进度推送 |
+| `POST` | `/api/batch-review` | 批量审查（上传 txt/csv） |
+
+### 反馈与统计
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `POST` | `/api/feedback` | 提交审查反馈（需登录） |
+| `GET` | `/api/feedback/stats` | 反馈统计数据 |
+| `GET` | `/api/stats` | 审查统计数据 |
+| `GET` | `/api/reviews` | 审查历史列表（分页） |
+| `GET` | `/api/reviews/{review_id}` | 单条审查详情 |
+| `GET` | `/api/my-reviews` | 我的审查历史 |
+
+### 计费与用量
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| `GET` | `/api/plans` | 获取套餐列表 |
+| `GET` | `/api/my-plan` | 获取当前套餐 |
+| `GET` | `/api/usage` | 获取用量统计 |
+| `POST` | `/api/upgrade` | 升级套餐 |
+| `POST` | `/api/simulate-payment` | 模拟支付（Hackathon 阶段） |
+
+### 系统
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
 | `GET` | `/api/health` | 健康检查 |
+| `GET` | `/api/metrics` | 性能监控指标（P50/P95/P99） |
+| `GET` | `/api/queue/status` | 队列状态 |
+| `POST` | `/api/test-connection` | 测试 LLM API 连接 |
 
 ### 审查请求示例
 
@@ -278,7 +358,8 @@ python pipeline/run_pipeline.py
 POST /api/review
 {
   "text": "全网最低价，买到就是赚到！",
-  "industry": "ecommerce"
+  "industry": "ecommerce",
+  "model": "deepseek-chat"
 }
 ```
 
@@ -294,14 +375,51 @@ POST /api/review
       "text": "最低",
       "category": "极限用语",
       "severity": "high",
+      "confidence": 0.95,
       "law_article": "《广告法》第九条第三项",
       "explanation": "使用绝对化用语「最低」构成违规",
-      "suggestions": [{"original": "最低", "replacement": "优惠", "reason": "从合规映射表匹配"}]
+      "suggestions": [{"original": "最低", "replacement": "优惠", "reason": "从合规映射表匹配"}],
+      "related_cases": [{"title": "某电商平台最低价处罚案", "penalty": "罚款 20 万元", "article": "..."}]
     }
   ],
-  "summary": "检测到 2 处违规，最高风险等级：high"
+  "summary": "检测到 2 处违规，最高风险等级：high",
+  "processing_time_ms": 1200,
+  "token_usage": {"prompt_tokens": 500, "completion_tokens": 200, "total_tokens": 700},
+  "pipeline_steps": [
+    {"step": 1, "name": "禁用词匹配", "status": "completed", "detail": "命中 2 个疑似禁用词", "icon": "🔍"},
+    {"step": 2, "name": "LLM 语境判断", "status": "completed", "detail": "确认 2 个违规，排除 0 个误报", "icon": "🧠"},
+    {"step": 3, "name": "RAG 法规检索", "status": "completed", "detail": "检索到 6 条法规依据", "icon": "📚"},
+    {"step": 4, "name": "替代建议生成", "status": "completed", "detail": "生成 2 条合规替代建议", "icon": "✏️"}
+  ]
 }
 ```
+
+---
+
+## 更新日志
+
+### v2.0 — 2026-06-21（合并版）
+
+合并两个开发分支的优势功能：
+
+**新增功能**
+- 🔌 **LLM 兼容层** (`llm_compat.py`)：自研 CompatibleLLM，兼容推理模型（mimo 等），统一 `ainvoke` 接口
+- ⚡ **异步审查管线**：RequestQueue 并发控制（最大 5 并发）+ SSE 实时进度推送
+- 📊 **性能监控**：P50/P95/P99 延迟百分位 + 吞吐量 + 错误率中间件
+- 👤 **用户系统**：注册/登录/Token 鉴权/密码重置/账户注销
+- 💰 **套餐计费**：免费版/专业版/企业版，用量限制 + 升级 + 模拟支付
+- 📦 **批量审查**：上传 txt/csv 文件，逐行审查，最多 100 条/批
+- 📈 **反馈统计**：`/api/feedback/stats` + 异步置信度学习闭环
+- 🏛️ **处罚案例关联**：从 RAG 结果中自动提取相关处罚案例
+
+**改进**
+- ContextJudgment 扩展为多维置信度（violation_type / severity / context_relevance）
+- token 用量全链路追踪（prompt + completion tokens 累计）
+- 前端新增：登录/注册/定价/设置/批量上传页面
+- 修复 SSR hydration 不匹配问题
+- 修复法条依据字段映射（camelCase 转换兼容）
+
+**API 端点**：从 4 个扩展至 25 个
 
 ---
 

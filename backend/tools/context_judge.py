@@ -6,8 +6,6 @@ from pathlib import Path
 _PROJECT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_PROJECT / 'backend'))
 from schemas import BannedWordHit, ContextJudgment
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 
 
 # ============================================================
@@ -234,7 +232,7 @@ class ContextJudge:
     5. 反馈闭环学习：根据历史反馈动态调整置信度
     """
 
-    def __init__(self, llm: ChatOpenAI, max_concurrency: int = 3, timeout_s: int = 15):
+    def __init__(self, llm, max_concurrency: int = 3, timeout_s: int = 15):
         self._llm = llm
         import asyncio
         self._semaphore = asyncio.Semaphore(max_concurrency)
@@ -284,8 +282,8 @@ class ContextJudge:
                     # 超时控制
                     resp = await asyncio.wait_for(
                         self._llm.ainvoke([
-                            SystemMessage(content=system_prompt),
-                            HumanMessage(content=user_msg),
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_msg},
                         ]),
                         timeout=self._timeout_s,
                     )
@@ -297,7 +295,8 @@ class ContextJudge:
                 # 3. 应用反馈学习：根据历史反馈调整置信度
                 judgment = self._apply_feedback_learning(hit.word, judgment)
 
-                return judgment
+                usage = getattr(resp, 'usage_metadata', None) or {}
+                return judgment, (usage.get("input_tokens", 0), usage.get("output_tokens", 0))
 
             except asyncio.TimeoutError as e:
                 last_error = e
@@ -320,18 +319,25 @@ class ContextJudge:
             mitigating_factors=["系统异常，需人工复核"],
             suggested_severity="medium",
             violation_type=violation_type,
-        )
+        ), (0, 0)
 
     async def batch_judge(
         self,
         text: str,
         hits: list[BannedWordHit],
         industry: str = "general",
-    ) -> list[ContextJudgment]:
-        """批量判断多个禁用词命中。"""
+    ) -> tuple[list[ContextJudgment], int, int]:
+        """批量判断多个禁用词命中，返回 (judgments, total_in_tokens, total_out_tokens)。"""
         import asyncio
-        tasks = [self.judge(text, hit, industry) for hit in hits]
-        return await asyncio.gather(*tasks, return_exceptions=False)
+        results = await asyncio.gather(*[self.judge(text, hit, industry) for hit in hits], return_exceptions=False)
+        judgments = []
+        total_in = 0
+        total_out = 0
+        for judgment, (in_tok, out_tok) in results:
+            judgments.append(judgment)
+            total_in += in_tok
+            total_out += out_tok
+        return judgments, total_in, total_out
 
     # ---- 反馈学习相关 ----
 

@@ -5,12 +5,10 @@ from pathlib import Path
 _PROJECT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_PROJECT / 'backend'))
 from schemas import Suggestion
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
 
 
 class RewriteGenerator:
-    def __init__(self, llm: ChatOpenAI, replacement_source=None):
+    def __init__(self, llm, replacement_source=None):
         self._llm = llm
         self._replacements = {}
         if isinstance(replacement_source, dict):
@@ -31,9 +29,11 @@ class RewriteGenerator:
         """从映射表直接查找替代词"""
         return self._replacements.get(word, [])
 
-    async def generate(self, original_text: str, violations: list[dict]) -> list[Suggestion]:
-        """生成替代建议：先查映射表，查不到再用 LLM"""
+    async def generate(self, original_text: str, violations: list[dict]) -> tuple[list[Suggestion], int, int]:
+        """生成替代建议：先查映射表，查不到再用 LLM。返回 (suggestions, prompt_tokens, completion_tokens)"""
         suggestions = []
+        total_in = 0
+        total_out = 0
         for v in violations:
             word = v.get('word', '')
             alternatives = self.lookup(word)
@@ -47,7 +47,10 @@ class RewriteGenerator:
                 # LLM 生成
                 prompt = f"请为广告文案中的违规词「{word}」生成一个合规替代词。只输出替代词，不要解释。"
                 try:
-                    resp = await self._llm.ainvoke([HumanMessage(content=prompt)])
+                    resp = await self._llm.ainvoke([{"role": "user", "content": prompt}])
+                    usage = getattr(resp, 'usage_metadata', None) or {}
+                    total_in += usage.get("input_tokens", 0)
+                    total_out += usage.get("output_tokens", 0)
                     suggestions.append(Suggestion(
                         original=word,
                         replacement=resp.content.strip(),
@@ -59,4 +62,4 @@ class RewriteGenerator:
                         replacement="[需人工替换]",
                         reason="LLM 调用失败"
                     ))
-        return suggestions
+        return suggestions, total_in, total_out

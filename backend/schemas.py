@@ -96,6 +96,7 @@ class ReviewRequest(BaseModel):
     platform: Optional[str] = None
     api_key: Optional[str] = Field(default=None, description="LLM API Key，从 .env 读取或前端传入")
     base_url: Optional[str] = Field(default=None, description="LLM API Base URL")
+    model: Optional[str] = Field(default=None, description="模型名称，如 gpt-4o、deepseek-chat")
 
 
 class PipelineStep(BaseModel):
@@ -139,6 +140,34 @@ class StatsResponse(BaseModel):
     violationByCategory: list[dict] = []
     violationBySeverity: list[dict] = []
     recentReviews: list[dict] = []
+
+
+# ============================================================
+# 套餐 & 用量（来自 teammate 版本）
+# ============================================================
+
+class PlanInfo(BaseModel):
+    """套餐信息"""
+    id: str
+    name: str
+    price: int
+    max_reviews: int
+    max_batch: int
+    max_batch_lines: int
+    features: str
+
+
+class UsageStats(BaseModel):
+    """用量统计"""
+    plan: dict
+    today: dict
+    thisMonth: dict
+    limits: dict
+
+
+class UpgradeRequest(BaseModel):
+    """升级套餐请求"""
+    plan_id: str
 
 
 # ============================================================
