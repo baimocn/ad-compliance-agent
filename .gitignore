@@ -19,3 +19,71 @@ evaluation/eval_report.json
 
 # Python venv
 .venv/
+
+# --- secrets / local config ---
+.env
+.env.*
+!.env.example
+credentials*
+secrets*
+.npmrc
+.pypirc
+*.pem
+*.key
+id_rsa*
+.dsh-home/
+
+# --- dependencies ---
+node_modules/
+.pnpm-store/
+vendor/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# --- build output ---
+dist/
+build/
+.next/
+out/
+target/
+release/
+*.exe
+*.msi
+*.dmg
+*.AppImage
+
+# --- caches ---
+.cache/
+.gradle/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage/
+*.log
+
+# --- models / data / binaries ---
+*.pth
+*.pt
+*.onnx
+*.safetensors
+*.gguf
+*.bin
+*.zip
+*.7z
+*.tar
+*.tar.gz
+*.rar
+*.iso
+data/
+datasets/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
